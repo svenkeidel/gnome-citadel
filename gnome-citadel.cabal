@@ -4,7 +4,7 @@ version:               0.1.0.0
 -- description:
 license:               GPL-3
 license-file:          LICENSE
-author:                Markus, Sven Keidel
+author:                Markus Hauck, Sven Keidel
 maintainer:            svenkeidel at gmail dot com
 category:              Game
 build-type:            Simple
