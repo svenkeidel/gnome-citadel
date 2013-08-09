@@ -13,7 +13,10 @@ data-files:            tiles/*.png
 
 library
   hs-source-dirs:      src
-  Build-depends:       base ==4.5.*
+  other-modules:       Types
+  Build-depends:       base ==4.5.*,
+                       containers,
+                       lens
   
 executable sdl-test
   hs-source-dirs:      test
