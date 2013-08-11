@@ -14,13 +14,13 @@ main :: IO ()
 main = hspec spec
 
 spec :: Spec
-spec = describe "Exploring Lenses" $ do
+spec = describe "Lenses" $ do
   let level = L [1,2,3]
 
-  it "accessing and modifying the example Queue" $
+  it "can be used to access and modify the example queue" $
     (queue %~ (5:) $ level) ^. queue `shouldBe` [5,1,2,3]
 
-  it "using lenses as state actions" $ do
+  it "can be used as state actions" $ do
     let newLevel = flip execState level $ do
           queue %= (++ [4])
           queue %= (0:)
