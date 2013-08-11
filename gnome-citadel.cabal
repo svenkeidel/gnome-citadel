@@ -30,4 +30,6 @@ test-suite specs
   build-depends:       base ==4.5.*,
                        hspec,
                        gnome-citadel,
-                       QuickCheck
+                       QuickCheck,
+                       lens,
+                       mtl
