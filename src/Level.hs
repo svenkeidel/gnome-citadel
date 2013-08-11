@@ -14,25 +14,47 @@ module Level ( Level (..)
              ) where
 
 import Control.Lens.TH
+import Control.Lens ((^.),(%=),(+=))
+import Control.Monad.State
+import qualified Data.Foldable as F
+
 import Actor
 import StaticElement
 import Types
 import Tile
 import Task
+import Queue
 
 data Level = Level { _actors :: [Actor]
                    , _staticElements :: [StaticElement]
                    , _nextFreeId :: Identifier
-                   , _activeTaskQueue :: TaskQueue
-                   , _inactiveTaskQueue :: TaskQueue
+                   , _activeTaskQueue :: Queue Task
+                   , _inactiveTaskQueue :: Queue Task
                    }
 makeLenses ''Level
 
-createTask :: TaskType -> Coord -> Level -> (Identifier,Level)
-createTask = undefined
+createTask :: Coord -> TaskType -> State Level Task
+createTask coord tType = do
+  currentLevel <- get
+  let nextId = currentLevel ^. nextFreeId
+      task = Task nextId coord tType
+      targetQueue = if taskCanBeReached currentLevel
+                       then activeTaskQueue
+                       else inactiveTaskQueue
+  targetQueue %= enqueue task
+  nextFreeId += 1
+  return task
+  where
+    taskCanBeReached = isReachable coord
+
+isReachable :: Coord -> Level -> Bool
+isReachable = const $ const False
 
 hasTask :: Identifier -> Level -> Bool
-hasTask = undefined
+hasTask tId lvl = F.any match (lvl ^. activeTaskQueue) ||
+                  F.any match (lvl ^. inactiveTaskQueue)
+  where
+    match t = t ^. taskId == tId
 
 getTask :: Identifier -> Level -> (Coord,Task)
 getTask = undefined
