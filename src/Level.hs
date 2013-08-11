@@ -9,6 +9,8 @@ module Level ( Level (..)
              , at
              , createTask
              , numberOfTasks
+             , hasTask
+             , getTask
              ) where
 
 import Control.Lens.TH
@@ -26,8 +28,14 @@ data Level = Level { _actors :: [Actor]
                    }
 makeLenses ''Level
 
-createTask :: TaskType -> Coord -> Level -> Level
+createTask :: TaskType -> Coord -> Level -> (Identifier,Level)
 createTask = undefined
+
+hasTask :: Identifier -> Level -> Bool
+hasTask = undefined
+
+getTask :: Identifier -> Level -> (Coord,Task)
+getTask = undefined
 
 numberOfTasks :: Level -> Int
 numberOfTasks = undefined
