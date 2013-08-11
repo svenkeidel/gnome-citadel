@@ -20,10 +20,12 @@ library
                        Level,
                        Actor,
                        Renderable,
-                       StaticElement
+                       StaticElement,
+                       Queue
   Build-depends:       base ==4.*,
                        containers,
-                       lens
+                       lens,
+                       mtl
   
 executable sdl-test
   hs-source-dirs:      test
@@ -41,4 +43,6 @@ test-suite specs
                        containers,
                        hspec,
                        gnome-citadel,
-                       QuickCheck
+                       QuickCheck,
+                       mtl,
+                       lens
