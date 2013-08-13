@@ -17,6 +17,7 @@ import Control.Lens.TH
 import Control.Lens ((^.),(%=),(+=))
 import Control.Monad.State
 import qualified Data.Foldable as F
+import Data.Sequence as S
 
 import Actor
 import StaticElement
@@ -38,14 +39,12 @@ createTask coord tType = do
   currentLevel <- get
   let nextId = currentLevel ^. nextFreeId
       task = Task nextId coord tType
-      targetQueue = if taskCanBeReached currentLevel
+      targetQueue = if isReachable coord currentLevel
                        then activeTaskQueue
                        else inactiveTaskQueue
   targetQueue %= enqueue task
   nextFreeId += 1
   return task
-  where
-    taskCanBeReached = isReachable coord
 
 isReachable :: Coord -> Level -> Bool
 isReachable = const $ const False
@@ -60,7 +59,13 @@ getTask :: Identifier -> Level -> (Coord,Task)
 getTask = undefined
 
 numberOfTasks :: Level -> Int
-numberOfTasks = undefined
+numberOfTasks lvl = numberOfActiveTasks lvl + numberOfInactiveTasks lvl
+
+numberOfActiveTasks :: Level -> Int
+numberOfActiveTasks lvl = S.length $ lvl ^. activeTaskQueue
+
+numberOfInactiveTasks :: Level -> Int
+numberOfInactiveTasks lvl = S.length $ lvl ^. inactiveTaskQueue
 
 fromString :: String -> Level
 fromString = undefined
