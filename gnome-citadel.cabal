@@ -26,7 +26,7 @@ library
                        containers,
                        lens,
                        mtl
-  
+
 executable sdl-test
   hs-source-dirs:      test
   main-is:             Game/SDLTest.hs
