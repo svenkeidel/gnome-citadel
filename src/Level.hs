@@ -1,10 +1,13 @@
 {-# LANGUAGE TemplateHaskell #-}
 module Level ( Level (..)
+             {- Lenses -}
              , actors
              , staticElements
              , nextFreeId
              , activeTaskQueue
              , inactiveTaskQueue
+             , idToCoord
+
              , fromString
              , at
              , createTask
@@ -17,7 +20,9 @@ import Control.Lens.TH
 import Control.Lens ((^.),(%=),(+=))
 import Control.Monad.State
 import qualified Data.Foldable as F
+import qualified Data.Map as M
 import Data.Sequence as S
+import qualified Data.Monoid as DM
 
 import Actor
 import StaticElement
@@ -31,6 +36,7 @@ data Level = Level { _actors :: [Actor]
                    , _nextFreeId :: Identifier
                    , _activeTaskQueue :: Queue Task
                    , _inactiveTaskQueue :: Queue Task
+                   , _idToCoord :: M.Map Identifier Coord
                    }
 makeLenses ''Level
 
@@ -43,6 +49,7 @@ createTask coord tType = do
                        then activeTaskQueue
                        else inactiveTaskQueue
   targetQueue %= enqueue task
+  idToCoord %= M.insert nextId coord
   nextFreeId += 1
   return task
 
@@ -55,8 +62,19 @@ hasTask tId lvl = F.any match (lvl ^. activeTaskQueue) ||
   where
     match t = t ^. taskId == tId
 
-getTask :: Identifier -> Level -> (Coord,Task)
-getTask = undefined
+getTask :: Identifier -> Level -> Maybe (Coord,Task)
+getTask tId lvl = do
+  task <- foundTask
+  coord <- taskCoordinate
+  return (coord,task)
+  where
+    taskCoordinate :: Maybe Coord
+    taskCoordinate = M.lookup tId (lvl ^. idToCoord)
+
+    foundTask :: Maybe Task
+    foundTask = DM.getFirst $ F.foldMap DM.First [ F.find (\t -> t ^. taskId == tId) (lvl ^. activeTaskQueue)
+                , F.find (\t -> t ^. taskId == tId) (lvl ^. inactiveTaskQueue)
+                ]
 
 numberOfTasks :: Level -> Int
 numberOfTasks lvl = numberOfActiveTasks lvl + numberOfInactiveTasks lvl
