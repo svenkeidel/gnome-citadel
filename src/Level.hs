@@ -14,6 +14,7 @@ module Level ( Level (..)
              , numberOfTasks
              , hasTask
              , getTask
+             , Level.empty
              ) where
 
 import Control.Lens ((^.),(%=),(+=))
@@ -42,6 +43,9 @@ data Level = Level { _actors :: [Actor]
                    , _idToCoord :: M.Map Identifier Coord
                    }
 makeLenses ''Level
+
+empty :: Level
+empty = Level [] [] 0 S.empty S.empty M.empty
 
 createTask :: Coord -> TaskType -> State Level Task
 createTask coord tType = do
