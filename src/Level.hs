@@ -1,5 +1,7 @@
 {-# LANGUAGE TemplateHaskell, RankNTypes #-}
 module Level ( Level (..)
+             , emptyLevel
+
              {- Lenses -}
              , actors
              , staticElements
@@ -26,6 +28,7 @@ import qualified Data.Foldable as F
 import qualified Control.Lens.Getter as LG
 import qualified Data.Map as M
 import qualified Data.Monoid as DM
+import Data.Maybe(catMaybes)
 
 import Actor
 import StaticElement
@@ -34,14 +37,28 @@ import Tile
 import Task
 import Queue
 
-data Level = Level { _actors :: [Actor]
-                   , _staticElements :: [StaticElement]
-                   , _nextFreeId :: Identifier
-                   , _activeTaskQueue :: Queue Task
+data Level = Level { _actors            :: M.Map Identifier Actor
+                   , _staticElements    :: M.Map Identifier StaticElement
+                   , _nextFreeId        :: Identifier
+                   , _activeTaskQueue   :: Queue Task
                    , _inactiveTaskQueue :: Queue Task
-                   , _idToCoord :: M.Map Identifier Coord
+                   , _idToCoord         :: M.Map Identifier Coord
+                   , _coordToId         :: M.Map Coord [Identifier]
                    }
 makeLenses ''Level
+
+-- | smart constructor for an empty level
+emptyLevel :: Level
+emptyLevel =
+    Level
+    { _actors = M.empty
+    , _staticElements = M.empty
+    , _nextFreeId = 0
+    , _activeTaskQueue = S.empty
+    , _inactiveTaskQueue = S.empty
+    , _idToCoord = M.empty
+    , _coordToId = M.empty
+    }
 
 createTask :: Coord -> TaskType -> State Level Task
 createTask coord tType = do
@@ -100,5 +117,9 @@ numberOfInactiveTasks lvl = S.length $ lvl ^. inactiveTaskQueue
 fromString :: String -> Level
 fromString = undefined
 
-at :: Level -> Coord -> Tile
-at = undefined
+at :: Level -> Coord -> [Tile]
+at lvl coord = catMaybes $ map lookupTile ids
+    where
+        ids = M.findWithDefault [] coord (lvl ^. coordToId)
+        lookupTile ident =  toTile <$> M.lookup ident (lvl ^. actors)
+                        <|> toTile <$> M.lookup ident (lvl ^. staticElements)

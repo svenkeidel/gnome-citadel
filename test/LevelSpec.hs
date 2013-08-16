@@ -17,7 +17,7 @@ spec = describe "A Level" $ do
             , "@ #"
             ]
           level = fromString levelString
-      render (level `at` (1,1)) `shouldBe` '#'
-      render (level `at` (0,2)) `shouldBe` '@'
-      render (level `at` (1,2)) `shouldBe` ' '
-      render (level `at` (2,0)) `shouldBe` '#'
+      render (head $ level `at` (1,1)) `shouldBe` '#'
+      render (head $ level `at` (0,2)) `shouldBe` '@'
+      render (head $ level `at` (1,2)) `shouldBe` ' '
+      render (head $ level `at` (2,0)) `shouldBe` '#'
