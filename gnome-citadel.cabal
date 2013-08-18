@@ -13,23 +13,36 @@ data-files:            tiles/*.png
 
 library
   hs-source-dirs:      src
-  Build-depends:       base ==4.5.*
-  
+  ghc-options:         -Wall -Werror
+  exposed-modules:     Types,
+                       Tile,
+                       Task,
+                       Level,
+                       Actor,
+                       Renderable,
+                       StaticElement,
+                       Queue
+  Build-depends:       base ==4.*,
+                       containers,
+                       lens,
+                       mtl
+
 executable sdl-test
   hs-source-dirs:      test
   main-is:             Game/SDLTest.hs
-  build-depends:       base ==4.5.*,
+  build-depends:       base ==4.*,
                        SDL,
                        SDL-image
 
 test-suite specs
   type:                exitcode-stdio-1.0
   ghc-options:         -Wall -Werror
-  hs-source-dirs:      src, test
+  hs-source-dirs:      test
   main-is:             Spec.hs
-  build-depends:       base ==4.5.*,
-                       hspec,
+  build-depends:       base ==4.*,
+                       containers,
+                       hspec == 1.6.*,
                        gnome-citadel,
                        QuickCheck,
-                       lens,
-                       mtl
+                       mtl,
+                       lens
