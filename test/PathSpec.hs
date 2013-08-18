@@ -34,14 +34,16 @@ spec = describe "Path finding functionality" $ do
 
   it "should not expand to disallowed coords" $ do
     let conf = pfConf & canBeWalked .~ (/= (0,0))
-        (result,_) = runPathFinder conf pfState $ expand (0,1)
+        result = evalPathFinder conf pfState $ expand (0,1)
     (0,0) `elem` result `shouldBe` False
 
+  it "should return an empty path if start == goal" $ do
+    let path = evalPathFinder pfConf def $ findPath (0,0) (0,0)
+    path `shouldBe` Just []
+
   it "should add the cell to closed set after visiting it" $ do
-    let ((b,a),_) = runPathFinder pfConf pfState $ do
-          let cell = (0,0)
-          before <- alreadyVisited cell
+    let cell = (0,0)
+        cellWasVisited = evalPathFinder pfConf def $ do
           visit cell
-          after <- alreadyVisited cell
-          return (before,after)
-    (b,a) `shouldBe` (False,True)
+          alreadyVisited cell
+    cellWasVisited `shouldBe` True

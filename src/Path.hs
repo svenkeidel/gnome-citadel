@@ -22,7 +22,7 @@ module Path ( neighbors
             ) where
 
 import Data.Monoid as DM
-import Control.Lens (both, (%~), view, (%=))
+import Control.Lens (both, (%~), view, (%=), use)
 import Control.Lens.TH
 import Data.Default
 import Control.Applicative (Applicative, (<*>),(<$>),pure)
@@ -68,8 +68,6 @@ runPathFinder :: PathFinderConfig ->
                  (a,PathFinderState)
 runPathFinder c st (PathFinder a) = runIdentity $ runStateT (runReaderT a c) st
 
-findPath :: Coord -> Coord -> PathFinder [Coord]
-findPath = undefined
 execPathFinder :: PathFinderConfig ->
                   PathFinderState ->
                   PathFinder a ->
@@ -82,9 +80,37 @@ evalPathFinder :: PathFinderConfig ->
                   a
 evalPathFinder c st a = fst $ runPathFinder c st a
 
+findPath :: Coord -> Coord -> PathFinder (Maybe [Coord])
+findPath current goal =
+  if targetFound
+    then (Just . reconstructPath) <$> use seen
+    else do
+      nodesLeft <- nodesLeftToExpand
+      ifGreaterZero nodesLeft $ do
+        visit current
+        nbs <- expand current
+        current `analyzeNbs` nbs
+        findPath undefined goal
+  where
+    targetFound = current == goal
+    ifGreaterZero :: Monad m => Int -> m (Maybe a) -> m (Maybe a)
+    ifGreaterZero n action = if n == 0
+                               then return Nothing
+                               else action
+
+reconstructPath :: Map.Map Coord (Score,Coord) -> [Coord]
+reconstructPath _ = []
+
+nodesLeftToExpand :: (Functor m, MonadState PathFinderState m) => m Int
+nodesLeftToExpand = PSQ.size <$> gets (view open)
 
 expand :: (Applicative m, MonadReader PathFinderConfig m) => Coord -> m [Coord]
 expand coord = filter <$> asks (view canBeWalked) <*> pure (neighbors coord)
+
+analyzeNbs :: ( MonadReader PathFinderConfig m
+              , MonadState PathFinderState m
+              ) => Coord -> [Coord] -> m ()
+analyzeNbs = undefined
 
 visit :: MonadState PathFinderState m => Coord -> m ()
 visit c = closed %= Set.insert c
