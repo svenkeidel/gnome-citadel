@@ -17,6 +17,8 @@ module Path ( neighbors
 
             , PathFinder
             , runPathFinder
+            , evalPathFinder
+            , execPathFinder
             ) where
 
 import Data.Monoid as DM
@@ -68,6 +70,18 @@ runPathFinder c st (PathFinder a) = runIdentity $ runStateT (runReaderT a c) st
 
 findPath :: Coord -> Coord -> PathFinder [Coord]
 findPath = undefined
+execPathFinder :: PathFinderConfig ->
+                  PathFinderState ->
+                  PathFinder a ->
+                  PathFinderState
+execPathFinder c st a = snd $ runPathFinder c st a
+
+evalPathFinder :: PathFinderConfig ->
+                  PathFinderState ->
+                  PathFinder a ->
+                  a
+evalPathFinder c st a = fst $ runPathFinder c st a
+
 
 expand :: (Applicative m, MonadReader PathFinderConfig m) => Coord -> m [Coord]
 expand coord = filter <$> asks (view canBeWalked) <*> pure (neighbors coord)
