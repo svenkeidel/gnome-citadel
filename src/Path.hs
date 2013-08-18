@@ -6,6 +6,10 @@ module Path ( neighbors
             , closed
             , open
             , seen
+
+            , PathFinderConfig (PathFinderConfig)
+            , canBeWalked
+            , heuristicCost
             ) where
 
 import Data.Monoid as DM
@@ -26,11 +30,17 @@ data PathFinderState = PathFinderState { _closed :: Set.Set Coord
                                        , _open :: PSQ.PSQ Coord Score
                                        , _seen :: Map.Map Coord (Score,Coord)
                                        }
+makeLenses ''PathFinderState
+
+
+data PathFinderConfig = PathFinderConfig { _canBeWalked :: Coord -> Bool
+                                         , _heuristicCost :: Coord -> Coord -> Score
+                                         }
+makeLenses ''PathFinderConfig
 
 instance Default PathFinderState where
   def = PathFinderState def PSQ.empty def
 
-makeLenses ''PathFinderState
 
 findPath :: Coord -> Coord -> [Coord]
 findPath = undefined
