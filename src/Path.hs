@@ -1,4 +1,4 @@
-{-# LANGUAGE TemplateHaskell #-}
+{-# LANGUAGE TemplateHaskell, GeneralizedNewtypeDeriving #-}
 module Path ( neighbors
             , findPath
 
@@ -10,13 +10,21 @@ module Path ( neighbors
             , PathFinderConfig (PathFinderConfig)
             , canBeWalked
             , heuristicCost
+
+            , PathFinder
+            , runPathFinder
             ) where
 
 import Data.Monoid as DM
 import Control.Lens (both, (%~))
 import Control.Lens.TH
-import Control.Monad (guard)
 import Data.Default
+
+import Control.Monad.Trans.Reader
+import Control.Monad.Trans.State
+import Control.Monad.Identity
+import Control.Monad.Reader.Class
+import Control.Monad.State.Class
 
 import qualified Data.Map as Map
 import qualified Data.Set as Set
@@ -32,17 +40,22 @@ data PathFinderState = PathFinderState { _closed :: Set.Set Coord
                                        }
 makeLenses ''PathFinderState
 
+instance Default PathFinderState where
+  def = PathFinderState def PSQ.empty def
 
 data PathFinderConfig = PathFinderConfig { _canBeWalked :: Coord -> Bool
                                          , _heuristicCost :: Coord -> Coord -> Score
                                          }
 makeLenses ''PathFinderConfig
 
-instance Default PathFinderState where
-  def = PathFinderState def PSQ.empty def
+newtype PathFinder a = PathFinder (ReaderT PathFinderConfig (
+                                      StateT PathFinderState Identity) a)
+    deriving (Functor, Monad, MonadState PathFinderState, MonadReader PathFinderConfig)
 
+runPathFinder :: PathFinderConfig -> PathFinderState -> PathFinder a -> (a,PathFinderState)
+runPathFinder c st (PathFinder a) = runIdentity $ runStateT (runReaderT a c) st
 
-findPath :: Coord -> Coord -> [Coord]
+findPath :: Coord -> Coord -> PathFinder [Coord]
 findPath = undefined
 
 allowedDirections :: [Coord]

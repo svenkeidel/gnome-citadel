@@ -28,6 +28,7 @@ library
                        lens,
                        mtl,
                        PSQueue == 1.1.*,
+                       transformers == 0.3.*,
                        data-default == 0.5.*
 
 executable sdl-test
