@@ -1,4 +1,4 @@
-{-# LANGUAGE MultiParamTypeClasses #-}
+{-# LANGUAGE MultiParamTypeClasses, FlexibleInstances #-}
 module Renderable ( Renderable(..)
                   ) where
 
@@ -11,3 +11,7 @@ class Renderable t repr where
 
 instance Renderable Tile Char where
   render = view tileCharRepr
+
+instance Renderable [Tile] Char where
+  render []    = ' '
+  render (t:_) = render t
