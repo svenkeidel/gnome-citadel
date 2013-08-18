@@ -1,56 +1,46 @@
-module Path ( findPath
-            , neighbors
-            , isBlocked
-            , inBounds
-            , expand
+{-# LANGUAGE TemplateHaskell #-}
+module Path ( neighbors
+            , findPath
+
+            , PathFinderState (PathFinderState)
+            , closed
+            , open
+            , seen
             ) where
 
 import Data.Monoid as DM
 import Control.Lens (both, (%~))
+import Control.Lens.TH
+import Control.Monad (guard)
+import Data.Default
 
-import Level
+import qualified Data.Map as Map
+import qualified Data.Set as Set
+import qualified Data.PSQueue as PSQ
+
 import Types
 
-type Heuristic a = Coord -> Coord -> a
-type Path = [Coord]
+type Score = Double
 
-findPath :: Coord -> Coord -> Level -> Heuristic Double -> Maybe Path
+data PathFinderState = PathFinderState { _closed :: Set.Set Coord
+                                       , _open :: PSQ.PSQ Coord Score
+                                       , _seen :: Map.Map Coord (Score,Coord)
+                                       }
+
+instance Default PathFinderState where
+  def = PathFinderState def PSQ.empty def
+
+makeLenses ''PathFinderState
+
+findPath :: Coord -> Coord -> [Coord]
 findPath = undefined
 
-expand :: Coord -> Level -> [Coord]
-expand c lvl = filter predicate . neighbors $ c
-  where
-    predicate :: Coord -> Bool
-    predicate = and . conditions
-
-    conditions :: Coord -> [Bool]
-    conditions = sequence [ isBlocked lvl
-                          , inBounds lvl
-                          ]
-
-
-isBlocked :: Level -> Coord -> Bool
-isBlocked = undefined
-
-inBounds :: Level -> Coord -> Bool
-inBounds = undefined
-
 allowedDirections :: [Coord]
-allowedDirections = straightDirs ++ diagonalDirs
-
-straightDirs :: [Coord]
-straightDirs = [ (-1, 0)
-               , ( 1, 0)
-               , ( 0,-1)
-               , ( 0, 1)
-               ]
-
-diagonalDirs :: [Coord]
-diagonalDirs = [ (-1,-1)
-               , (-1, 1)
-               , ( 1,-1)
-               , ( 1, 1)
-               ]
+allowedDirections = do
+  x <- [-1, 0, 1]
+  y <- [-1, 0, 1]
+  guard $ (x,y) /= (0,0)
+  return (x,y)
 
 neighbors :: Coord -> [Coord]
 neighbors c = map (unsumTuple . DM.mappend fromCoordSum) toCoordSums
