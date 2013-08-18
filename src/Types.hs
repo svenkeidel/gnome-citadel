@@ -1,4 +1,3 @@
-{-# LANGUAGE TemplateHaskell #-}
 module Types ( Identifier
              , Coord
              ) where
