@@ -31,7 +31,7 @@ import qualified Data.Foldable as F
 import qualified Control.Lens.Getter as LG
 import qualified Data.Map as M
 import qualified Data.Monoid as DM
-import Data.Maybe(catMaybes)
+import Data.Maybe(mapMaybe)
 
 import Actor
 import StaticElement
@@ -140,8 +140,8 @@ fromString builder str = execState (mapM insert coordStr) emptyLevel
       | otherwise   = do
           nextId <- freshId
           case builder char of
-            Left  a -> actors         %= (M.insert nextId a)
-            Right s -> staticElements %= (M.insert nextId s)
+            Left  a -> actors         %= M.insert nextId a
+            Right s -> staticElements %= M.insert nextId s
           idToCoord %= M.insert nextId coord
           coordToId %= M.insertWith (++) coord [nextId]
           bounds    %= maxT coord
@@ -153,7 +153,7 @@ toString lvl = unlines $ (map . map) (render . at lvl) coords
     coords  = [ [ (x,y) | x <- [0..mx] ] | y <- [0..my] ] :: [[Coord]]
 
 at :: Level -> Coord -> [Tile]
-at lvl coord = catMaybes $ map lookupTile ids
+at lvl coord = mapMaybe lookupTile ids
   where
     ids = M.findWithDefault [] coord (lvl ^. coordToId)
     lookupTile ident =  toTile <$> M.lookup ident (lvl ^. actors)
