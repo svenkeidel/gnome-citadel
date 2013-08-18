@@ -1,6 +1,10 @@
 module LevelSpec(main, spec) where
 
+import Control.Lens ((^.))
+import Control.Monad.State
+
 import Test.Hspec
+
 import Level
 import Renderable
 import Tile
@@ -30,6 +34,16 @@ spec = describe "A Level" $ do
       null (level `at` (1,2)) `shouldBe` True
       null (level `at` (0,1)) `shouldBe` True
 
+    it "can generate fresh identifiers" $ do
+      let ((n1, n2, n3), level') = runState generateFreshIdentifiers level
+          generateFreshIdentifiers = do
+            n1' <- freshId
+            n2' <- freshId
+            n3' <- freshId
+            return (n1', n2', n3')
+      n2 `shouldBe` n1 + 1
+      n3 `shouldBe` n2 + 1
+      level' ^. nextFreeId `shouldBe` n3
+
     it "can be rendered to a string" $ do
-      pending
       show level `shouldBe` levelString

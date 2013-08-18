@@ -8,7 +8,9 @@ module Level ( Level (..)
              , nextFreeId
              , activeTaskQueue
              , inactiveTaskQueue
+             , bounds
              , idToCoord
+             , coordToId
 
              , fromString
              , at
@@ -16,6 +18,7 @@ module Level ( Level (..)
              , numberOfTasks
              , hasTask
              , getTask
+             , freshId
              ) where
 
 import Control.Lens ((^.),(%=),(+=))
@@ -36,19 +39,21 @@ import Types
 import Tile
 import Task
 import Queue
+import Renderable
 
 data Level = Level { _actors            :: M.Map Identifier Actor
                    , _staticElements    :: M.Map Identifier StaticElement
                    , _nextFreeId        :: Identifier
                    , _activeTaskQueue   :: Queue Task
                    , _inactiveTaskQueue :: Queue Task
+                   , _bounds            :: (Int, Int)
                    , _idToCoord         :: M.Map Identifier Coord
                    , _coordToId         :: M.Map Coord [Identifier]
                    }
 makeLenses ''Level
 
 instance Show Level where
-  show = undefined
+  show = toString
 
 -- | smart constructor for an empty level
 emptyLevel :: Level
@@ -59,6 +64,7 @@ emptyLevel =
   , _nextFreeId = 0
   , _activeTaskQueue = S.empty
   , _inactiveTaskQueue = S.empty
+  , _bounds = (0, 0)
   , _idToCoord = M.empty
   , _coordToId = M.empty
   }
@@ -126,8 +132,9 @@ type TileBuilder = Char -> Either Actor StaticElement
 fromString :: TileBuilder -> String -> Level
 fromString builder str = execState (mapM insert coordStr) emptyLevel
   where
-    coordStr     = concat $ (zipWith . zipWith) (,) coords (lines str)
-    coords       = [ [ (x,y) | x <- [0..] ] | y <- [0..] ] :: [[Coord]]
+    coordStr               = concat $ (zipWith . zipWith) (,) coords (lines str)
+    coords                 = [ [ (x,y) | x <- [0..] ] | y <- [0..] ] :: [[Coord]]
+    maxT (x1, y1) (x2, y2) = (max x1 x2, max y1 y2)
     insert (coord,char)
       | char == ' ' = return ()
       | otherwise   = do
@@ -137,6 +144,13 @@ fromString builder str = execState (mapM insert coordStr) emptyLevel
             Right s -> staticElements %= (M.insert nextId s)
           idToCoord %= M.insert nextId coord
           coordToId %= M.insertWith (++) coord [nextId]
+          bounds    %= maxT coord
+
+toString :: Level -> String
+toString lvl = unlines $ (map . map) (render . at lvl) coords
+  where
+    (mx,my) = lvl ^. bounds
+    coords  = [ [ (x,y) | x <- [0..mx] ] | y <- [0..my] ] :: [[Coord]]
 
 at :: Level -> Coord -> [Tile]
 at lvl coord = catMaybes $ map lookupTile ids
