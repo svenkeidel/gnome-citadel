@@ -49,4 +49,5 @@ test-suite specs
                        gnome-citadel,
                        QuickCheck,
                        mtl,
-                       lens
+                       lens,
+                       data-default == 0.5.*
