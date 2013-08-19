@@ -1,5 +1,5 @@
 {-# LANGUAGE TemplateHaskell, RankNTypes #-}
-nmodule Level ( Level (..)
+module Level ( Level (..)
              , emptyLevel
 
              {- Lenses -}
