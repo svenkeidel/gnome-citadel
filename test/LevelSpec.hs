@@ -8,6 +8,7 @@ import Test.Hspec
 import Level
 import Renderable
 import Tile
+import Types
 
 main :: IO ()
 main = hspec spec
@@ -28,11 +29,11 @@ spec = describe "A Level" $ do
         level = fromString levelBuilder levelString
 
     it "can be accessed via coordinates" $ do
-      render (head $ level `at` (1,1)) `shouldBe` '#'
-      render (head $ level `at` (0,2)) `shouldBe` '@'
-      render (head $ level `at` (2,0)) `shouldBe` '#'
-      null (level `at` (1,2)) `shouldBe` True
-      null (level `at` (0,1)) `shouldBe` True
+      render (head $ level `at` from2d (1,1)) `shouldBe` '#'
+      render (head $ level `at` from2d (0,2)) `shouldBe` '@'
+      render (head $ level `at` from2d (2,0)) `shouldBe` '#'
+      null (level `at` from2d (1,2)) `shouldBe` True
+      null (level `at` from2d (0,1)) `shouldBe` True
 
     it "can generate fresh identifiers" $ do
       let ((n1, n2, n3), level') = runState generateFreshIdentifiers level

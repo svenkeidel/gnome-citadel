@@ -1,5 +1,5 @@
 {-# LANGUAGE TemplateHaskell, RankNTypes #-}
-module Level ( Level (..)
+nmodule Level ( Level (..)
              , emptyLevel
 
              {- Lenses -}
@@ -133,8 +133,8 @@ fromString :: TileBuilder -> String -> Level
 fromString builder str = execState (mapM insert coordStr) emptyLevel
   where
     coordStr               = concat $ (zipWith . zipWith) (,) coords (lines str)
-    coords                 = [ [ (x,y) | x <- [0..] ] | y <- [0..] ] :: [[Coord]]
-    maxT (x1, y1) (x2, y2) = (max x1 x2, max y1 y2)
+    coords                 = [ [ from2d (x,y) | x <- [0..] ] | y <- [0..] ] :: [[Coord]]
+    maxT (Coord x1 y1 _) (x2,y2) = (max x1 x2, max y1 y2)
     insert (coord,char)
       | char == ' ' = return ()
       | otherwise   = do
@@ -150,7 +150,7 @@ toString :: Level -> String
 toString lvl = unlines $ (map . map) (render . at lvl) coords
   where
     (mx,my) = lvl ^. bounds
-    coords  = [ [ (x,y) | x <- [0..mx] ] | y <- [0..my] ] :: [[Coord]]
+    coords  = [ [ from2d (x,y) | x <- [0..mx] ] | y <- [0..my] ] :: [[Coord]]
 
 at :: Level -> Coord -> [Tile]
 at lvl coord = mapMaybe lookupTile ids
