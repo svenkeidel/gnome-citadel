@@ -80,7 +80,7 @@ spec = describe "Path finding functionality" $ do
 
     it "should update the predecessor map if the new path is shorter" $ do
       let pfState' = pfState & seen %~ Map.insert toAnalyze (10,Just fromCoord)
-                             & seen %~ Map.insert fromCoord (0,Just fromCoord)
+                             & seen %~ Map.insert fromCoord (0, Nothing)
           resultState = execPathFinder pfConf pfState' $ do
             visit toAnalyze
             analyzeNbs fromCoord [toAnalyze]

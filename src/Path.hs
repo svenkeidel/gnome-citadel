@@ -29,9 +29,10 @@ import qualified Data.Monoid as DM
 import Control.Lens (view, (%=), use, (.=), (&), (%~))
 import Control.Lens.TH
 import Data.Default
+import Data.Maybe (isJust,fromJust)
 import Control.Applicative (Applicative, (<*>),(<$>),pure)
 
-import Control.Monad(guard, filterM, (<=<))
+import Control.Monad(guard, filterM, (<=<), when, unless)
 
 import Control.Monad.Trans.Reader (ReaderT, runReaderT)
 import Control.Monad.Trans.State (StateT, runStateT)
@@ -46,8 +47,9 @@ import qualified Data.PSQueue as PSQ
 import Types
 
 type Score = Double
+type Cost = Double
 
-type PredecessorMap = Map.Map Coord (Score,Maybe Coord)
+type PredecessorMap = Map.Map Coord (Cost,Maybe Coord)
 data PathFinderState = PathFinderState { _closed :: Set.Set Coord
                                        , _open :: PSQ.PSQ Coord Score
                                        , _seen :: PredecessorMap
@@ -59,7 +61,7 @@ instance Default PathFinderState where
 
 data PathFinderConfig = PathFinderConfig { _canBeWalked :: Coord -> Bool
                                          , _heuristicCost :: Coord -> Score
-                                         , _stepCost :: Coord -> Coord -> Score
+                                         , _stepCost :: Coord -> Coord -> Cost
                                          }
 makeLenses ''PathFinderConfig
 
@@ -103,16 +105,14 @@ findPath current goal =
   if targetFound
     then (Just . reverse . reconstructPath goal) <$> use seen
     else do
+      visit current
+      nbs <- expand current
+      current `analyzeNbs` nbs
       nodesLeft <- nodesLeftToExpand
       ifGreaterZero nodesLeft $ do
-        visit current
-        nbs <- expand current
-        current `analyzeNbs` nbs
-        next <- do
-          Just (k PSQ.:-> _, queue) <- PSQ.minView <$> use open
-          open .= queue
-          return k
-        findPath next goal
+        Just (nextMin PSQ.:-> _, queue) <- PSQ.minView <$> use open
+        open .= queue
+        findPath nextMin goal
   where
     targetFound = current == goal
     ifGreaterZero :: Monad m => Int -> m (Maybe a) -> m (Maybe a)
@@ -137,23 +137,15 @@ analyzeNb :: ( Applicative m
               , MonadState PathFinderState m
               ) => Coord -> Coord -> m ()
 analyzeNb predecessor nb = do
-  wasVisited <- alreadyVisited nb
+  alreadySeen <- alreadyVisited nb
   costSoFar <- costFor predecessor
   estimation <- view stepCost <*> pure predecessor <*> pure nb
-  previousCost <- costFor nb
   let newCost = (+estimation) <$> costSoFar
-      betterWayFound = (<) <$> newCost <*> previousCost
-  if wasVisited
-    then case betterWayFound of
-        Just True -> updateCost newCost nb predecessor
-        _ -> return ()
-    else
-      case newCost of
-        Just cost -> do
-          seen %= Map.insert nb (cost,Just predecessor)
-          heuristicValue <- view heuristicCost <*> pure nb
-          open %= insertIfNotPresent nb heuristicValue
-        Nothing -> return ()
+  mayUpdateCost newCost nb predecessor
+  unless alreadySeen $ do
+      heuristicValue <- view heuristicCost <*> pure nb
+      when (isJust newCost) $
+        open %= insertIfNotPresent nb (fromJust newCost + heuristicValue)
 
 analyzeNbs :: ( Applicative m
               , MonadReader PathFinderConfig m
@@ -161,13 +153,18 @@ analyzeNbs :: ( Applicative m
               ) => Coord -> [Coord] -> m ()
 analyzeNbs predecessor = mapM_ (analyzeNb predecessor)
 
-costFor :: (Functor m, MonadState PathFinderState m) => Coord -> m (Maybe Score)
+costFor :: (Functor m, MonadState PathFinderState m) => Coord -> m (Maybe Cost)
 costFor c = (fmap . fmap) fst $ Map.lookup c <$> use seen
 
-updateCost :: (MonadState PathFinderState m) =>
-              Maybe Score -> Coord -> Coord -> m ()
-updateCost (Just cost) nb p = seen %= Map.insert nb (cost, Just p)
-updateCost Nothing _ _ = return ()
+mayUpdateCost :: (Functor m, MonadState PathFinderState m) =>
+              Maybe Cost -> Coord -> Coord -> m ()
+mayUpdateCost (Just cost) target origin = do
+  previous <- costFor target
+  case previous of
+    Just previousCost -> when (cost < previousCost) $
+      seen %= Map.insert target (cost, Just origin)
+    Nothing -> seen %= Map.insert target (cost, Just origin)
+mayUpdateCost Nothing _ _ = return ()
 
 insertIfNotPresent :: (Ord k, Ord p) => k -> p -> PSQ.PSQ k p -> PSQ.PSQ k p
 insertIfNotPresent key prio queue = case PSQ.lookup key queue of
