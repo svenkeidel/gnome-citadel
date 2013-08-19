@@ -1,12 +1,16 @@
 {-# LANGUAGE TemplateHaskell, RankNTypes #-}
 module Level ( Level (..)
+             , emptyLevel
+
              {- Lenses -}
              , actors
              , staticElements
              , nextFreeId
              , activeTaskQueue
              , inactiveTaskQueue
+             , bounds
              , idToCoord
+             , coordToId
 
              , fromString
              , at
@@ -14,7 +18,7 @@ module Level ( Level (..)
              , numberOfTasks
              , hasTask
              , getTask
-             , Level.empty
+             , freshId
              ) where
 
 import Control.Lens ((^.),(%=),(+=))
@@ -27,6 +31,7 @@ import qualified Data.Foldable as F
 import qualified Control.Lens.Getter as LG
 import qualified Data.Map as M
 import qualified Data.Monoid as DM
+import Data.Maybe(mapMaybe)
 
 import Actor
 import StaticElement
@@ -34,30 +39,46 @@ import Types
 import Tile
 import Task
 import Queue
+import Renderable
 
-data Level = Level { _actors :: [Actor]
-                   , _staticElements :: [StaticElement]
-                   , _nextFreeId :: Identifier
-                   , _activeTaskQueue :: Queue Task
+data Level = Level { _actors            :: M.Map Identifier Actor
+                   , _staticElements    :: M.Map Identifier StaticElement
+                   , _nextFreeId        :: Identifier
+                   , _activeTaskQueue   :: Queue Task
                    , _inactiveTaskQueue :: Queue Task
-                   , _idToCoord :: M.Map Identifier Coord
+                   , _bounds            :: (Int, Int)
+                   , _idToCoord         :: M.Map Identifier Coord
+                   , _coordToId         :: M.Map Coord [Identifier]
                    }
 makeLenses ''Level
 
-empty :: Level
-empty = Level [] [] 0 S.empty S.empty M.empty
+instance Show Level where
+  show = toString
+
+-- | smart constructor for an empty level
+emptyLevel :: Level
+emptyLevel =
+  Level
+  { _actors = M.empty
+  , _staticElements = M.empty
+  , _nextFreeId = 0
+  , _activeTaskQueue = S.empty
+  , _inactiveTaskQueue = S.empty
+  , _bounds = (0, 0)
+  , _idToCoord = M.empty
+  , _coordToId = M.empty
+  }
 
 createTask :: Coord -> TaskType -> State Level Task
 createTask coord tType = do
   currentLevel <- get
-  let nextId = currentLevel ^. nextFreeId
-      task = Task nextId coord tType
+  nextId <- freshId
+  let task = Task nextId coord tType
       targetQueue = if isReachable coord currentLevel
                        then activeTaskQueue
                        else inactiveTaskQueue
   targetQueue %= enqueue task
   idToCoord %= M.insert nextId coord
-  nextFreeId += 1
   return task
 
 isReachable :: Coord -> Level -> Bool
@@ -101,8 +122,39 @@ numberOfActiveTasks lvl = S.length $ lvl ^. activeTaskQueue
 numberOfInactiveTasks :: Level -> Int
 numberOfInactiveTasks lvl = S.length $ lvl ^. inactiveTaskQueue
 
-fromString :: String -> Level
-fromString = undefined
+freshId :: State Level Int
+freshId = do
+  nextFreeId += 1
+  LG.use nextFreeId
 
-at :: Level -> Coord -> Tile
-at = undefined
+type TileBuilder = Char -> Either Actor StaticElement
+
+fromString :: TileBuilder -> String -> Level
+fromString builder str = execState (mapM insert coordStr) emptyLevel
+  where
+    coordStr               = concat $ (zipWith . zipWith) (,) coords (lines str)
+    coords                 = [ [ from2d (x,y) | x <- [0..] ] | y <- [0..] ] :: [[Coord]]
+    maxT (Coord x1 y1 _) (x2,y2) = (max x1 x2, max y1 y2)
+    insert (coord,char)
+      | char == ' ' = return ()
+      | otherwise   = do
+          nextId <- freshId
+          case builder char of
+            Left  a -> actors         %= M.insert nextId a
+            Right s -> staticElements %= M.insert nextId s
+          idToCoord %= M.insert nextId coord
+          coordToId %= M.insertWith (++) coord [nextId]
+          bounds    %= maxT coord
+
+toString :: Level -> String
+toString lvl = unlines $ (map . map) (render . at lvl) coords
+  where
+    (mx,my) = lvl ^. bounds
+    coords  = [ [ from2d (x,y) | x <- [0..mx] ] | y <- [0..my] ] :: [[Coord]]
+
+at :: Level -> Coord -> [Tile]
+at lvl coord = mapMaybe lookupTile ids
+  where
+    ids = M.findWithDefault [] coord (lvl ^. coordToId)
+    lookupTile ident =  toTile <$> M.lookup ident (lvl ^. actors)
+                    <|> toTile <$> M.lookup ident (lvl ^. staticElements)
