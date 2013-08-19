@@ -50,4 +50,5 @@ test-suite specs
                        QuickCheck,
                        mtl,
                        lens,
-                       data-default == 0.5.*
+                       data-default == 0.5.*,
+                       PSQueue == 1.1.*
