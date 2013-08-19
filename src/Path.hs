@@ -114,10 +114,10 @@ reconstructPath finish pmap = case Map.lookup finish pmap of
   Just (_, Nothing) -> [finish]
 
 nodesLeftToExpand :: (Functor m, MonadState PathFinderState m) => m Int
-nodesLeftToExpand = PSQ.size <$> gets (view open)
+nodesLeftToExpand = PSQ.size <$> use open
 
 expand :: (Applicative m, MonadReader PathFinderConfig m) => Coord -> m [Coord]
-expand coord = filter <$> asks (view canBeWalked) <*> pure (neighbors coord)
+expand coord = filter <$> view canBeWalked <*> pure (neighbors coord)
 
 analyzeNb :: ( Applicative m
               , MonadReader PathFinderConfig m
