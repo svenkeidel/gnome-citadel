@@ -164,3 +164,43 @@ spec = describe "Path finding functionality" $ do
           result = evalPathFinder pfConf' pfState' $
                    findPath start goal
       result `shouldBe` Nothing
+
+    {-
+         0   1   2   3   4   5
+       +---+---+---+---+---+---+
+     0 |   |   | . |   | X |   |
+       +---+---+---+---+---+---+
+     1 |   | . | X | S | X |   |
+       +---+---+---+---+---+---+
+     2 |   | . | X | X | X |   |
+       +---+---+---+---+---+---+
+     3 |   |   | . | . | . |   |
+       +---+---+---+---+---+---+
+     4 | X | X | X | X | X | . |
+       +---+---+---+---+---+---+
+     5 | G | . | . | . | . |   |
+       +---+---+---+---+---+---+
+    -}
+    it "should find a path around a more complicated obstacle" $ do
+      let goal = from2d (0,5)
+          blocked = map from2d [ (2,1) , (2,2) , (3,2)
+                               , (4,0) , (4,1) , (4,2)
+                               , (0,4) , (1,4) , (2,4)
+                               , (3,4) , (4,4)
+                               ]
+          path = searchPath (\c@(Coord x y z) -> c `notElem` blocked
+                                                 && z == 0
+                                                 && x `elem` [0..5]
+                                                 && y `elem` [0..5])
+                            (distance goal)
+                            (const . const $ 1)
+                            (from2d (3,1))
+                            (from2d (0,5))
+      path `shouldBe` Just (map from2d [ (3,1)
+                                       , (2,0)
+                                       , (1,1)
+                                       , (1,2)
+                                       , (2,3), (3,3) , (4,3)
+                                       , (5,4)
+                                       , (4,5), (3,5), (2,5), (1,5), (0,5)
+                                       ])
