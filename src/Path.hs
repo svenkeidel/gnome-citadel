@@ -1,6 +1,7 @@
 {-# LANGUAGE TemplateHaskell, GeneralizedNewtypeDeriving, FlexibleContexts #-}
 module Path ( neighbors
             , findPath
+            , searchPath
             , expand
             , expandUnvisited
             , visit
@@ -25,7 +26,7 @@ module Path ( neighbors
             ) where
 
 import qualified Data.Monoid as DM
-import Control.Lens (view, (%=), use, (.=))
+import Control.Lens (view, (%=), use, (.=), (&), (%~))
 import Control.Lens.TH
 import Data.Default
 import Control.Applicative (Applicative, (<*>),(<$>),pure)
@@ -84,6 +85,18 @@ evalPathFinder :: PathFinderConfig ->
                   PathFinder a ->
                   a
 evalPathFinder c st a = fst $ runPathFinder c st a
+
+searchPath :: (Coord -> Bool)
+           -> (Coord -> Double)
+           -> (Coord -> Coord -> Double)
+           -> Coord -> Coord -> Maybe [Coord]
+searchPath walkable heuristic step start goal =
+  evalPathFinder config initState $ findPath start goal
+  where
+    config = PathFinderConfig walkable heuristic step
+    initState :: PathFinderState
+    initState = def & seen %~ Map.insert start (0,Nothing)
+                    & open %~ PSQ.insert start 0
 
 findPath :: Coord -> Coord -> PathFinder (Maybe [Coord])
 findPath current goal =
