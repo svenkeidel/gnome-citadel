@@ -140,3 +140,27 @@ spec = describe "Path finding functionality" $ do
           result = evalPathFinder pfConf' pfState' $
                    findPath start goal
       result `shouldBe` (Just . map from2d $ [(2,0),(1,0),(0,1),(1,2),(2,2)])
+
+    {-
+          0   1   2
+        +---+---+---+
+     0  |   | S |   |
+        +---+---+---+
+     1  | x | x | x |
+        +---+---+---+
+     2  |   | G |   |
+        +------------
+    -}
+    it "should terminate if path is blocked" $ do
+      let start   = from2d (1,0)
+          goal    = from2d (1,2)
+          blocked = map from2d [(0,1), (1,1), (2,1)]
+          free    = map from2d [ (x,y) | x <- [0..2], y <- [0,2] ]
+          pfConf' = PathFinderConfig (\c -> c `notElem` blocked && c `elem` free)
+                                     (distance goal)
+                                     (const . const $ 1)
+          pfState' = pfState & seen %~ Map.insert start (0,Nothing)
+                             & open %~ PSQ.insert start 0
+          result = evalPathFinder pfConf' pfState' $
+                   findPath start goal
+      result `shouldBe` Nothing
