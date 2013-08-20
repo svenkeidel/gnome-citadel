@@ -22,7 +22,8 @@ library
                        Renderable,
                        StaticElement,
                        Queue,
-                       Path
+                       Path,
+                       Path.Internal
   Build-depends:       base ==4.*,
                        containers,
                        lens,

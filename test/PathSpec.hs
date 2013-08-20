@@ -3,6 +3,7 @@ module PathSpec(main, spec) where
 import Test.Hspec
 import Types
 import Path
+import Path.Internal
 import Data.List (sort)
 import Data.Default
 import Data.Maybe (isJust)
