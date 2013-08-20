@@ -20,15 +20,16 @@ spec = describe "Path finding functionality" $ do
   let pfConf = PathFinderConfig (const True) (const 0) (const .const $ 1)
       pfState = def :: PathFinderState
 
-  it "should be able to reconstruct the reverse path, given a predecessor map" $ do
+  it "should be able to reconstruct the path, given a predecessor map" $ do
     let pmap = Map.fromList [ (from2d (0,0), (0, Nothing))
                             , (from2d (0,1), (0, Just $ from2d (0,0)))
                             , (from2d (0,2), (0, Just $ from2d (0,1)))
                             ]
-    reconstructPath (from2d (0,2)) pmap `shouldBe` map from2d [ (0,2)
-                                                              , (0,1)
-                                                              , (0,0)
-                                                              ]
+    reconstructPath (from2d (0,2)) pmap `shouldBe`
+      (Just $ Path 0 (map from2d [ (0,0)
+                                 , (0,1)
+                                 , (0,2)
+                                 ]))
 
   {-
             (4,4)     (5,4)      (6,4)
@@ -96,8 +97,11 @@ spec = describe "Path finding functionality" $ do
   context "finding a path" $ do
 
     it "should return an empty path if start == goal" $ do
-      let path = evalPathFinder pfConf def $ findPath (from2d (0,0)) (from2d (0,0))
-      path `shouldBe` Just []
+      let start = from2d (0,0)
+          goal = start
+          path = searchPath (const True) (distance goal) (const . const $ 1) start goal
+      path `shouldBe` (Just $ Path 0 [])
+
 
     {-
           0   1   2
@@ -112,12 +116,8 @@ spec = describe "Path finding functionality" $ do
     it "should find a straight path" $ do
       let start = from2d (1,0)
           goal = from2d (1,2)
-          pfConf' = PathFinderConfig (const True) (distance goal) (const . const $ 1)
-          pfState' = pfState & seen %~ Map.insert start (0,Nothing)
-                             & open %~ PSQ.insert start 0
-          result = evalPathFinder pfConf' pfState' $
-                   findPath start goal
-      result `shouldBe` (Just . map from2d $ [(1,0), (1,1),(1,2)])
+          path = searchPath (const True) (distance goal) (const . const $ 1) start goal
+      path `shouldBe` (Just $ Path 2 (map from2d [(1,0), (1,1),(1,2)]))
 
     {-
          0   1   2   3   4
@@ -133,14 +133,12 @@ spec = describe "Path finding functionality" $ do
       let start = from2d (2,0)
           goal = from2d (2,2)
           blocked = map from2d [(1,1), (2,1), (3,1)]
-          pfConf' = PathFinderConfig (`notElem` blocked)
-                                     (distance goal)
-                                     (const . const $ 1)
-          pfState' = pfState & seen %~ Map.insert start (0,Nothing)
-                             & open %~ PSQ.insert start 0
-          result = evalPathFinder pfConf' pfState' $
-                   findPath start goal
-      result `shouldBe` (Just . map from2d $ [(2,0),(1,0),(0,1),(1,2),(2,2)])
+          path = searchPath (`notElem` blocked)
+                            (distance goal)
+                            (const . const $ 1)
+                            start
+                            goal
+      path `shouldBe` (Just $ Path 4 (map from2d [(2,0),(1,0),(0,1),(1,2),(2,2)]))
 
     {-
           0   1   2
@@ -183,7 +181,8 @@ spec = describe "Path finding functionality" $ do
        +---+---+---+---+---+---+
     -}
     it "should find a path around a more complicated obstacle" $ do
-      let goal = from2d (0,5)
+      let start = from2d (3,1)
+          goal = from2d (0,5)
           blocked = map from2d [ (2,1) , (2,2) , (3,2)
                                , (4,0) , (4,1) , (4,2)
                                , (0,4) , (1,4) , (2,4)
@@ -195,13 +194,13 @@ spec = describe "Path finding functionality" $ do
                                                  && y `elem` [0..5])
                             (distance goal)
                             (const . const $ 1)
-                            (from2d (3,1))
-                            (from2d (0,5))
-      path `shouldBe` Just (map from2d [ (3,1)
-                                       , (2,0)
-                                       , (1,1)
-                                       , (1,2)
-                                       , (2,3), (3,3) , (4,3)
-                                       , (5,4)
-                                       , (4,5), (3,5), (2,5), (1,5), (0,5)
-                                       ])
+                            start
+                            goal
+      path `shouldBe` (Just $ Path 12 (map from2d [ (3,1)
+                                                  , (2,0)
+                                                  , (1,1)
+                                                  , (1,2)
+                                                  , (2,3), (3,3) , (4,3)
+                                                  , (5,4)
+                                                  , (4,5), (3,5), (2,5), (1,5), (0,5)
+                                                  ]))

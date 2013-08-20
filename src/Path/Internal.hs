@@ -20,6 +20,10 @@ module Path.Internal ( findPath
                      , runPathFinder
                      , evalPathFinder
                      , execPathFinder
+
+                     , Path (Path)
+                     , pathLength
+                     , pathCoords
                      ) where
 
 import qualified Data.Monoid as DM
@@ -45,6 +49,11 @@ import Types
 
 type Score = Double
 type Cost = Double
+
+data Path = Path { _pathLength :: Double
+                 , _pathCoords :: [Coord]
+                 } deriving (Show,Eq)
+makeLenses ''Path
 
 type PredecessorMap = Map.Map Coord (Cost,Maybe Coord)
 data PathFinderState = PathFinderState { _closed :: Set.Set Coord
@@ -86,10 +95,10 @@ evalPathFinder :: PathFinderConfig ->
                   a
 evalPathFinder c st a = fst $ runPathFinder c st a
 
-findPath :: Coord -> Coord -> PathFinder (Maybe [Coord])
+findPath :: Coord -> Coord -> PathFinder (Maybe Path)
 findPath current goal =
-  if targetFound
-    then (Just . reverse . reconstructPath goal) <$> use seen
+  if current == goal
+    then reconstructPath goal <$> use seen
     else do
       visit current
       nbs <- expand current
@@ -100,17 +109,23 @@ findPath current goal =
         open .= queue
         findPath nextMin goal
   where
-    targetFound = current == goal
     ifGreaterZero :: Monad m => Int -> m (Maybe a) -> m (Maybe a)
     ifGreaterZero n action = if n == 0
                                then return Nothing
                                else action
 
-reconstructPath :: Coord -> PredecessorMap -> [Coord]
-reconstructPath finish pmap = case Map.lookup finish pmap of
-  Nothing -> []
-  Just (_, Just predec) -> finish : reconstructPath predec pmap
-  Just (_, Nothing) -> [finish]
+reconstructPath :: Coord -> PredecessorMap -> Maybe Path
+reconstructPath finish pmap = do
+  (totalCost,predec) <- Map.lookup finish pmap
+  case predec of
+    Nothing -> return $ Path 0 []
+    Just _ -> return $ Path totalCost (reverse $ go finish)
+  where
+    go :: Coord -> [Coord]
+    go current = case Map.lookup current pmap of
+      Nothing -> []
+      Just (_, Just predec) -> current : go predec
+      Just (_, Nothing) -> [current]
 
 nodesLeftToExpand :: (Functor m, MonadState PathFinderState m) => m Int
 nodesLeftToExpand = PSQ.size <$> use open
