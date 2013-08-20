@@ -99,7 +99,7 @@ spec = describe "Path finding functionality" $ do
     it "should return an empty path if start == goal" $ do
       let start = from2d (0,0)
           goal = start
-          path = searchPath (const True) (distance goal) (const . const $ 1) start goal
+          path = defaultPath (const True) start goal
       path `shouldBe` (Just $ Path 0 [])
 
 
@@ -116,7 +116,7 @@ spec = describe "Path finding functionality" $ do
     it "should find a straight path" $ do
       let start = from2d (1,0)
           goal = from2d (1,2)
-          path = searchPath (const True) (distance goal) (const . const $ 1) start goal
+          path = defaultPath (const True) start goal
       path `shouldBe` (Just $ Path 2 (map from2d [(1,0), (1,1),(1,2)]))
 
     {-
@@ -133,11 +133,7 @@ spec = describe "Path finding functionality" $ do
       let start = from2d (2,0)
           goal = from2d (2,2)
           blocked = map from2d [(1,1), (2,1), (3,1)]
-          path = searchPath (`notElem` blocked)
-                            (distance goal)
-                            (const . const $ 1)
-                            start
-                            goal
+          path = defaultPath (`notElem` blocked) start goal
       path `shouldBe` (Just $ Path 4 (map from2d [(2,0),(1,0),(0,1),(1,2),(2,2)]))
 
     {-
@@ -155,14 +151,9 @@ spec = describe "Path finding functionality" $ do
           goal    = from2d (1,2)
           blocked = map from2d [(0,1), (1,1), (2,1)]
           free    = map from2d [ (x,y) | x <- [0..2], y <- [0,2] ]
-          pfConf' = PathFinderConfig (\c -> c `notElem` blocked && c `elem` free)
-                                     (distance goal)
-                                     (const . const $ 1)
-          pfState' = pfState & seen %~ Map.insert start (0,Nothing)
-                             & open %~ PSQ.insert start 0
-          result = evalPathFinder pfConf' pfState' $
-                   findPath start goal
-      result `shouldBe` Nothing
+          allowed c = c `notElem` blocked && c `elem` free
+          path = defaultPath allowed start goal
+      path `shouldBe` Nothing
 
     {-
          0   1   2   3   4   5
@@ -188,14 +179,11 @@ spec = describe "Path finding functionality" $ do
                                , (0,4) , (1,4) , (2,4)
                                , (3,4) , (4,4)
                                ]
-          path = searchPath (\c@(Coord x y z) -> c `notElem` blocked
-                                                 && z == 0
-                                                 && x `elem` [0..5]
-                                                 && y `elem` [0..5])
-                            (distance goal)
-                            (const . const $ 1)
-                            start
-                            goal
+          allowed c@(Coord x y z) = c `notElem` blocked
+                                 && z == 0
+                                 && x `elem` [0..5]
+                                 && y `elem` [0..5]
+          path = defaultPath allowed start goal
       path `shouldBe` (Just $ Path 12 (map from2d [ (3,1)
                                                   , (2,0)
                                                   , (1,1)
