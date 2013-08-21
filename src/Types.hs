@@ -6,6 +6,7 @@ module Types ( Identifier
              , cz
              , from2d
              , to2d
+             , distance
 
              , SumCoord (..)
              ) where
@@ -16,8 +17,19 @@ import Data.Monoid
 
 type Identifier = Int
 
-data Coord = Coord { _cx :: Int, _cy :: Int, _cz :: Int } deriving (Show,Eq,Ord)
+data Coord = Coord { _cx :: Int, _cy :: Int, _cz :: Int } deriving (Eq,Ord)
 makeLenses ''Coord
+
+distance :: Coord -> Coord -> Double
+distance (Coord x1 y1 z1) (Coord x2 y2 z2) = sqrt $ xSum + ySum + zSum
+  where
+    xSum = fromIntegral . square $ x1 - x2
+    ySum = fromIntegral . square $ y1 - y2
+    zSum = fromIntegral . square $ z1 - z2
+    square x = x * x
+
+instance Show Coord where
+  show (Coord x y z) = show (x,y,z)
 
 newtype SumCoord = SumCoord { getSumCoord :: Coord }
 instance Monoid SumCoord where
