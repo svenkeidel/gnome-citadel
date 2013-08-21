@@ -2,6 +2,10 @@ module Path ( searchPath
             , existsPath
             , pathCost
             , defaultPath
+
+            , Path (Path)
+            , pathLength
+            , pathCoords
             ) where
 
 import Control.Lens ((&), (%~), view)
