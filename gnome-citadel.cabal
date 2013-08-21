@@ -21,11 +21,16 @@ library
                        Actor,
                        Renderable,
                        StaticElement,
-                       Queue
+                       Queue,
+                       Path,
+                       Path.Internal
   Build-depends:       base ==4.*,
                        containers,
                        lens,
-                       mtl
+                       mtl,
+                       PSQueue == 1.1.*,
+                       transformers == 0.3.*,
+                       data-default == 0.5.*
 
 executable sdl-test
   hs-source-dirs:      test
@@ -45,4 +50,6 @@ test-suite specs
                        gnome-citadel,
                        QuickCheck,
                        mtl,
-                       lens
+                       lens,
+                       data-default == 0.5.*,
+                       PSQueue == 1.1.*

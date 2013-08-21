@@ -1,4 +1,4 @@
-{-# LANGUAGE TemplateHaskell, RankNTypes #-}
+{-# LANGUAGE TemplateHaskell, RankNTypes, FlexibleContexts #-}
 module Level ( Level (..)
              , emptyLevel
 
@@ -69,7 +69,7 @@ emptyLevel =
   , _coordToId = M.empty
   }
 
-createTask :: Coord -> TaskType -> State Level Task
+createTask :: MonadState Level m => Coord -> TaskType -> m Task
 createTask coord tType = do
   currentLevel <- get
   nextId <- freshId
@@ -122,7 +122,7 @@ numberOfActiveTasks lvl = S.length $ lvl ^. activeTaskQueue
 numberOfInactiveTasks :: Level -> Int
 numberOfInactiveTasks lvl = S.length $ lvl ^. inactiveTaskQueue
 
-freshId :: State Level Int
+freshId :: MonadState Level m => m Int
 freshId = do
   nextFreeId += 1
   LG.use nextFreeId
