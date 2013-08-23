@@ -1,7 +1,7 @@
 module PathSpec(main, spec) where
 
 import Test.Hspec
-import Types
+import Coords
 import Path
 import Path.Internal
 import Data.List (sort)

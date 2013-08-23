@@ -46,7 +46,7 @@ import qualified Data.Map as Map
 import qualified Data.Set as Set
 import qualified Data.PSQueue as PSQ
 
-import Types
+import Coords
 
 type Score = Double
 type Cost = Double

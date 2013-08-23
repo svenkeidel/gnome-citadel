@@ -16,7 +16,7 @@ import Data.Maybe (isJust)
 import qualified Data.Map as Map
 import qualified Data.PSQueue as PSQ
 
-import Types
+import Coords
 import Path.Internal
 
 searchPath :: (Coord -> Bool)            -- ^ Check if coord is allowed

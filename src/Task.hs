@@ -8,6 +8,7 @@ module Task ( Task (..)
 
 import Control.Lens.TH
 import Types
+import Coords
 
 data TaskType = Mine | Lumber
 
@@ -16,4 +17,3 @@ data Task = Task { _taskId :: Identifier
                  , _taskType :: TaskType
                  }
 makeLenses ''Task
-

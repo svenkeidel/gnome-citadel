@@ -2,7 +2,7 @@ import Criterion.Config
 import Criterion.Main
 
 import Path
-import Types
+import Coords
 
 main :: IO ()
 main = defaultMain

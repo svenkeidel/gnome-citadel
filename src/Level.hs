@@ -40,6 +40,7 @@ import Tile
 import Task
 import Queue
 import Renderable
+import Coords
 
 data Level = Level { _actors            :: M.Map Identifier Actor
                    , _staticElements    :: M.Map Identifier StaticElement
