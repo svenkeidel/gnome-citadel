@@ -29,6 +29,7 @@ module Path.Internal ( findPath
 import qualified Data.Monoid as DM
 import Control.Lens (view, (%=), use, (.=))
 import Control.Lens.TH
+import Control.DeepSeq (NFData (rnf))
 import Data.Default
 import Data.Maybe (isJust,fromJust)
 import Control.Applicative (Applicative, (<*>),(<$>),pure)
@@ -54,6 +55,9 @@ data Path = Path { _pathLength :: Double
                  , _pathCoords :: [Coord]
                  } deriving (Show,Eq)
 makeLenses ''Path
+
+instance NFData Path where
+  rnf (Path l cs) = l `seq` cs `seq` ()
 
 type PredecessorMap = Map.Map Coord (Cost,Maybe Coord)
 data PathFinderState = PathFinderState { _closed :: Set.Set Coord
