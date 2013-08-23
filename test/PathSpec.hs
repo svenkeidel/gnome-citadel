@@ -17,7 +17,7 @@ main = hspec spec
 
 spec :: Spec
 spec = describe "Path finding functionality" $ do
-  let pfConf = PathFinderConfig (const True) (const 0) (const .const $ 1)
+  let pfConf = PathFinderConfig (const True) (const 0) (const .const $ 1) neighbors2d
       pfState = def :: PathFinderState
 
   it "should be able to reconstruct the path, given a predecessor map" $ do
@@ -43,7 +43,7 @@ spec = describe "Path finding functionality" $ do
             (4,6)     (5,6)      (6,6)
   -}
   it "should retrieve all possible neighbor coords" $
-    (sort . neighbors) (from2d (5,5)) `shouldBe`
+    (sort . neighbors2d) (from2d (5,5)) `shouldBe`
       sort (map from2d [ (4,4),(5,4),(6,4)
                        , (4,5),      (6,5)
                        , (4,6),(5,6),(6,6)

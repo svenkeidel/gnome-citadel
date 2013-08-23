@@ -4,7 +4,7 @@ module Path.Internal ( findPath
                      , visit
                      , analyzeNbs
                      , reconstructPath
-                     , neighbors
+                     , neighbors2d
 
                      , PathFinderState (PathFinderState)
                      , closed
@@ -69,6 +69,7 @@ instance Default PathFinderState where
 data PathFinderConfig = PathFinderConfig { _canBeWalked :: Coord -> Bool
                                          , _heuristicCost :: Coord -> Score
                                          , _stepCost :: Coord -> Coord -> Cost
+                                         , _neighbors :: Coord -> [Coord]
                                          }
 makeLenses ''PathFinderConfig
 
@@ -131,7 +132,7 @@ nodesLeftToExpand :: (Functor m, MonadState PathFinderState m) => m Int
 nodesLeftToExpand = PSQ.size <$> use open
 
 expand :: (Applicative m, MonadReader PathFinderConfig m) => Coord -> m [Coord]
-expand coord = filter <$> view canBeWalked <*> pure (neighbors coord)
+expand coord = filter <$> view canBeWalked <*> (view neighbors <*> pure coord)
 
 analyzeNb :: ( Applicative m
               , MonadReader PathFinderConfig m
@@ -185,7 +186,7 @@ allowedDirections = do
   guard $ (x,y) /= (0,0)
   return . from2d $ (x,y)
 
-neighbors :: Coord -> [Coord]
-neighbors c = map (getSumCoord . DM.mappend fromCoordSum) toSumCoords
+neighbors2d :: Coord -> [Coord]
+neighbors2d c = map (getSumCoord . DM.mappend fromCoordSum) toSumCoords
   where fromCoordSum = SumCoord c
         toSumCoords = map SumCoord allowedDirections

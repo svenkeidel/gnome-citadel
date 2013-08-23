@@ -61,7 +61,7 @@ pathFinderSearch :: (Coord -> Bool)
 pathFinderSearch walkable heuristic step start goal =
   runPathFinder config initState $ findPath start goal
   where
-    config = PathFinderConfig walkable heuristic step
+    config = PathFinderConfig walkable heuristic step neighbors2d
     initState :: PathFinderState
     initState = def & seen %~ Map.insert start (0,Nothing)
                     & open %~ PSQ.insert start 0
