@@ -21,7 +21,7 @@ module Level ( Level (..)
              , freshId
              ) where
 
-import Control.Lens ((^.),(%=),(+=))
+import Control.Lens ((^.),(%=),(<+=))
 import Control.Lens.TH
 import Control.Monad.State
 import Control.Applicative
@@ -124,9 +124,7 @@ numberOfInactiveTasks :: Level -> Int
 numberOfInactiveTasks lvl = S.length $ lvl ^. inactiveTaskQueue
 
 freshId :: MonadState Level m => m Int
-freshId = do
-  nextFreeId += 1
-  LG.use nextFreeId
+freshId = nextFreeId <+= 1
 
 type TileBuilder = Char -> Either Actor StaticElement
 
