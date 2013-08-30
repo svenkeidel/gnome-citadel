@@ -19,20 +19,24 @@ module Level ( Level (..)
              , hasTask
              , getTask
              , freshId
+             , findPath
              ) where
 
 import Control.Lens ((^.),(%=),(<+=))
 import Control.Lens.TH
 import Control.Monad.State
 import Control.Applicative
+import Control.Monad.Reader.Class
 
 import qualified Data.Sequence as S
 import qualified Data.Foldable as F
 import qualified Control.Lens.Getter as LG
 import qualified Data.Map as M
 import qualified Data.Monoid as DM
+
 import Data.Maybe(mapMaybe)
 
+import Path
 import Actor
 import StaticElement
 import Types
@@ -41,6 +45,7 @@ import Task
 import Queue
 import Renderable
 import Coords
+
 
 data Level = Level { _actors            :: M.Map Identifier Actor
                    , _staticElements    :: M.Map Identifier StaticElement
@@ -157,3 +162,9 @@ at lvl coord = mapMaybe lookupTile ids
     ids = M.findWithDefault [] coord (lvl ^. coordToId)
     lookupTile ident =  toTile <$> M.lookup ident (lvl ^. actors)
                     <|> toTile <$> M.lookup ident (lvl ^. staticElements)
+
+findPath :: (MonadReader Level m) => Coord -> Coord -> m (Maybe Path)
+findPath from to = do
+  level <- ask
+  let check = undefined level
+  return $ defaultPath check from to
