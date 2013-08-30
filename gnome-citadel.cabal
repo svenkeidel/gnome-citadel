@@ -21,6 +21,7 @@ library
                        Actor,
                        Renderable,
                        StaticElement,
+                       Scheduler,
                        Queue,
                        Coords,
                        Path,
