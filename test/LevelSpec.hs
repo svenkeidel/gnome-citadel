@@ -8,7 +8,6 @@ import Test.Hspec
 import Level
 import Renderable
 import Tile
-import Coords
 
 main :: IO ()
 main = hspec spec

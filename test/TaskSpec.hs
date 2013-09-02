@@ -3,7 +3,6 @@ module TaskSpec(main, spec) where
 import Test.Hspec
 import Level
 import Task
-import Coords
 
 import Data.Ord (comparing)
 import Control.Monad.State

@@ -20,6 +20,11 @@ module Level ( Level (..)
              , getTask
              , freshId
              , findPath
+             , getCoord
+             , walkable
+
+             , module Coords
+             , module Types
              ) where
 
 import Control.Lens ((^.),(%=),(<+=))
@@ -34,7 +39,7 @@ import qualified Control.Lens.Getter as LG
 import qualified Data.Map as M
 import qualified Data.Monoid as DM
 
-import Data.Maybe(mapMaybe)
+import Data.Maybe(mapMaybe,fromMaybe)
 
 import Path
 import Actor
@@ -163,8 +168,14 @@ at lvl coord = mapMaybe lookupTile ids
     lookupTile ident =  toTile <$> M.lookup ident (lvl ^. actors)
                     <|> toTile <$> M.lookup ident (lvl ^. staticElements)
 
+getCoord :: (Functor m, MonadReader Level m) => Identifier -> m (Coord)
+getCoord ident = fromMaybe (error $ "the identifer '" ++ show ident ++ "' has no assigned coordinate")
+               . M.lookup ident <$> LG.view idToCoord
+
+walkable :: Level -> Coord -> Bool
+walkable = undefined
+
 findPath :: (MonadReader Level m) => Coord -> Coord -> m (Maybe Path)
 findPath from to = do
   level <- ask
-  let check = undefined level
-  return $ defaultPath check from to
+  return $ defaultPath (walkable level) from to
