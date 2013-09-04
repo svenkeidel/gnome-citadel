@@ -22,6 +22,7 @@ module Level ( Level (..)
              , findPath
              , getCoord
              , walkable
+             , findActor
 
              , module Coords
              , module Types
@@ -179,3 +180,6 @@ findPath :: (MonadReader Level m) => Coord -> Coord -> m (Maybe Path)
 findPath from to = do
   level <- ask
   return $ defaultPath (walkable level) from to
+
+findActor :: (MonadReader Level m) => (Actor -> Bool) -> m (Maybe (Identifier, Actor))
+findActor = undefined
