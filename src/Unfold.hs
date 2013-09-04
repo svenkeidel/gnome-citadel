@@ -1,17 +1,20 @@
-{-# LANGUAGE ExistentialQuantification #-}
+{-# LANGUAGE RankNTypes, ExistentialQuantification #-}
 module Unfold ( Unfoldable(..)
-              , Exec
-              , execution
               , Step(..)
+              , Unfold
+              , unfold
+              , unfoldList
+              , toList
               ) where
 
 import Data.Monoid
+import Control.Applicative
+import Control.Monad
+import qualified Data.Foldable as F
+import qualified Data.Traversable as T
 
 class Unfoldable u where
-  unfold :: u a -> Step (u a) a
-
-instance Unfoldable (Unfold s) where
-  unfold u = (\s -> u { state = s }) <!> (stepper u) (state u)
+  next :: u a -> Step (u a) a
 
 data Step s a
   = Yield a s
@@ -25,29 +28,76 @@ instance Functor (Step s) where
 f <!> (Yield a s) = Yield a $ f s
 _ <!> Done        = Done
 
-data Unfold s a
-  -- | An 'Unfold s a' takes a public state 's' and produces values of type 'a'.
-  = Unfold { state   :: s
-           , stepper :: s -> Step s a
-           }
+data UnfoldS s a
+  -- | An 'UnfoldS s a' has a state 's' and produces values of type 'a'.
+  = UnfoldS s (s -> Step s a)
 
-data Exec a
-  -- | An execution wraps an unfold and hides its private state.
-  = forall u. Unfoldable u => Exec (u a)
+instance Unfoldable (UnfoldS s) where
+  next (UnfoldS s next') = (\s' -> UnfoldS s' next') <!> next' s
 
-execution :: s -> (s -> Step s a) -> Exec a
-execution s f = Exec $ Unfold s f
+instance Functor (UnfoldS s) where
+  fmap f (UnfoldS s next') = UnfoldS s $ fmap f . next'
 
-instance Unfoldable Exec where
-  unfold (Exec u) = Exec <!> unfold u
+data Unfold a
+  -- | An 'Unfold' wraps an 'UnfoldS' and hides its state.
+  = forall u. (Functor u, Unfoldable u) => Unfold (u a)
 
-instance Monoid (Exec a) where
-  mempty = Exec $ Unfold () (const Done)
-  e1 `mappend` e2 =
-    Exec (Unfold (Left e1) stepper')
+-- | Smart constructor for an 'Unfold'
+unfold :: s -> (s -> Step s a) -> Unfold a
+unfold s next' = Unfold $ UnfoldS s next'
+
+instance Eq a => Eq (Unfold a) where
+  u1 == u2 = toList u1 == toList u2
+
+instance Show a => Show (Unfold a) where
+  show u = "Unfold " ++ show (toList u)
+
+instance Unfoldable Unfold where
+  next (Unfold u) = Unfold <!> next u
+
+instance Monoid (Unfold a) where
+  mempty = unfold () (const Done)
+  u1 `mappend` u2 =
+    unfold (Left u1) next'
     where
-      stepper' (Left e1') =
-        case unfold e1' of
-          Done        -> stepper' (Right e2)
-          Yield a e1'' -> Yield a (Left e1'')
-      stepper' (Right e2') = Right <!> unfold e2'
+      next' (Left u1') =
+        case next u1' of
+          Done         -> next' (Right u2)
+          Yield a u1'' -> Yield a (Left u1'')
+      next' (Right u2') = Right <!> next u2'
+
+instance Functor Unfold where
+  fmap f (Unfold u) = Unfold (fmap f u)
+
+instance Applicative Unfold where
+  pure  = return
+  (<*>) = ap
+
+instance Monad Unfold where
+  return x = unfold True (\s -> if s then Yield x False else Done)
+  u0 >>= f = unfold (Left u0) next'
+    where
+      next' (Left u1) =
+        case next u1 of
+          Yield a u1' -> next' $ Right $ (u1',f a)
+          Done      -> Done
+      next' (Right (u1,u2)) =
+        case next u2 of
+          Yield a u2' -> Yield a (Right (u1,u2'))
+          Done        -> next' $ Left u1
+
+instance F.Foldable Unfold where
+  foldr f b u =
+    case next u of
+      Yield a u' -> F.foldr f (f a b) u'
+      Done       -> b
+
+instance T.Traversable Unfold where
+  traverse f u = unfold <$> (T.sequenceA $ F.foldMap (pure . f) u) <*> pure unfoldList
+
+toList :: Unfold a -> [a]
+toList = reverse . F.foldr (:) []
+
+unfoldList :: [a] -> Step [a] a
+unfoldList (x:xs) = Yield x xs
+unfoldList []     = Done
