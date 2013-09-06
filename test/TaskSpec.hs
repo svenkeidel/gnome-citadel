@@ -2,6 +2,7 @@ module TaskSpec(main, spec) where
 
 import Test.Hspec
 import Level
+import Level.Task
 import Task
 
 import Data.Ord (comparing)

@@ -19,6 +19,7 @@ library
                        Task,
                        Level,
                        Level.Commands,
+                       Level.Task,
                        Actor,
                        Renderable,
                        StaticElement,
