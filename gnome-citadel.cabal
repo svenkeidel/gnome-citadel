@@ -18,6 +18,7 @@ library
                        Tile,
                        Task,
                        Level,
+                       Level.Task,
                        Actor,
                        Renderable,
                        StaticElement,
