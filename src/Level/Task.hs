@@ -16,9 +16,7 @@ import qualified Data.Sequence as S
 import qualified Data.Map as M
 
 import Level
-import Coords
 import Task
-import Types
 import Queue
 
 createTask :: MonadState Level m => Coord -> TaskType -> m Task

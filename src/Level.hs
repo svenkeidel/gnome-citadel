@@ -24,7 +24,7 @@ module Level ( Level (..)
              , module Types
              ) where
 
-import Control.Lens ((^.),(%=),(<+=))
+import Control.Lens ((^.),(%=),(<+=), view)
 import Control.Lens.TH
 import Control.Monad.State
 import Control.Applicative
@@ -108,9 +108,9 @@ at lvl coord = mapMaybe lookupTile ids
     lookupTile ident =  toTile <$> M.lookup ident (lvl ^. actors)
                     <|> toTile <$> M.lookup ident (lvl ^. staticElements)
 
-getCoord :: (Functor m, MonadReader Level m) => Identifier -> m (Coord)
+getCoord :: (Functor m, MonadReader Level m) => Identifier -> m Coord
 getCoord ident = fromMaybe (error $ "the identifer '" ++ show ident ++ "' has no assigned coordinate")
-               . M.lookup ident <$> LG.view idToCoord
+               . M.lookup ident <$> view idToCoord
 
 walkable :: Level -> Coord -> Bool
 walkable = undefined
