@@ -22,6 +22,10 @@ import Unfold
 
 type Command = Unfold
 
+-- | A level transformation that is used by the command scheduler
+type LevelTrans m = StateT Level m ()
+type LevelCommand m = Command (LevelTrans m)
+
 data ApproachError
   = PathNotFound Actor Coord
   | ApproachError String
@@ -36,8 +40,8 @@ instance Show ApproachError where
 
 -- | find a way to the destination and move the actor to it
 approach :: (Applicative m1, MonadReader Level m1, MonadError ApproachError m1,
-             Applicative m2, MonadState  Level m2, MonadError (MoveError Actor) m2)
-            => Actor -> Coord -> m1 (Command (m2 ()))
+             Applicative m2, MonadError (MoveError Actor) m2)
+            => Actor -> Coord -> m1 (LevelCommand m2)
 approach actor dest = do
   maybePath <- join $ findPath <$> getCoord actor <*> pure dest
   case maybePath of
@@ -60,8 +64,8 @@ instance Show t => Show (MoveError t) where
   show (MoveError s)     = "MoveError: " ++ s
 
 -- | move an actor or static element to an adjacent field
-move :: (TileRepr t, Applicative m, MonadState Level m, MonadError (MoveError t) m)
-     => t -> Coord -> Command (m ())
+move :: (TileRepr t, Applicative m, MonadError (MoveError t) m)
+     => t -> Coord -> LevelCommand m
 move t dest =
   return $ do
     src <- runInState $ getCoord t

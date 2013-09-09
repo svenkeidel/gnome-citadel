@@ -1,6 +1,5 @@
 {-# LANGUAGE TemplateHaskell, RankNTypes, FlexibleContexts, ScopedTypeVariables #-}
 module Level.CommandScheduler ( CommandScheduler
-                              , LevelState
                               , level
                               , runCommandScheduler
                               , addCommand
@@ -16,12 +15,9 @@ import Level.Commands
 
 import qualified Scheduler as S
 
--- | A level transformation that is used by the command scheduler
-type LevelState m = StateT Level m ()
-
 data CommandScheduler m =
   CommandScheduler
-  { _scheduler :: S.Scheduler Command (LevelState m)
+  { _scheduler :: S.Scheduler Command (LevelTrans m)
   , _level     :: Level
   }
 makeLenses ''CommandScheduler
@@ -33,7 +29,7 @@ runCommandScheduler s lvl = do
   return $ cmdSched ^. level
 
 -- | Adds a command to a schedule. The command is not executed immediately.
-addCommand :: (Monad m, MonadState (CommandScheduler m) ms) => Command (LevelState m) -> ms ()
+addCommand :: (Monad m, MonadState (CommandScheduler m) ms) => LevelCommand m -> ms ()
 addCommand c = scheduler %= execState (S.add c)
 
 -- | Applies the upcomming sequence of commands to the level. Lifts
