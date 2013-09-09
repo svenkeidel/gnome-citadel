@@ -1,14 +1,20 @@
 {-# LANGUAGE ScopedTypeVariables #-}
 module CommandSpec(main, spec) where
 
+import Control.Lens((.~), (&), use)
 import Control.Monad.State
 import Control.Monad.Reader
 import Control.Monad.Error
+
+import Data.List(find)
+import Data.Maybe(isJust)
 
 import Test.Hspec
 
 import Level
 import Level.Commands
+import Level.CommandScheduler hiding (level)
+import qualified Level.CommandScheduler as CS
 import Tile
 import Renderable
 
@@ -25,88 +31,85 @@ spec = describe "An Execution" $ do
           ]
         levelBuilder char =
           case char of
-              '#' -> Right wall
-              '@' -> Left dwarf
+              '#' -> Just $ Right wall
+              ' ' -> Just $ Right free
+              '@' -> Just $ Left dwarf
               _   -> error ("unrecognized char " ++ show char)
-        level = fromString levelBuilder levelString
-        Just (dwarfId,_) = flip runReader level $ findActor (\a -> render (toTile a) == '@')
-        
-        shouldBe' f x = do
-          s :: Level <- get
-          lift $ lift $ f s `shouldBe` x
+        contains x = isJust . find ((x ==) . render)
+        level  = fromString levelBuilder levelString
+               & walkable .~ (\lvl coord -> not $ contains '#' (lvl `at` coord))
+        dwarf' = head $ flip runReader level $ findActor (\a -> render (toTile a) == '@')
 
-        isRight = either (const False) (const True)
-        isLeft  = either (const True)  (const False)
+        levelShouldBe s = do
+          lvl <- use CS.level
+          lift $ lift $ show lvl `shouldBe` s
+
+        isRight (Right _) = True
+        isRight _         = False
+        isLeft = not . isRight
 
     describe "A Move" $ do  
       it "moves an actor in one step to an adjacent coordinate" $ do
-        
-        pending
 
-        e <- runErrorT $ flip execStateT level $ do
-          addCommand $ move dwarfId (from2d (1,2))
-          executeGameStep
-          show `shouldBe'` (unlines
-            [ "## "
-            , " # "
-            , " @ "
-            ])
-          addCommand $ move dwarfId (from2d (0,1))
-          executeGameStep
-          show `shouldBe'` (unlines
-            [ "## "
-            , "@# "
-            , "   "
-            ])
+
+        e <- runErrorT $ flip runCommandScheduler level $ do
+
+             addCommand $ move dwarf' (from2d (1,2))
+             executeGameStep
+             levelShouldBe $ unlines
+               [ "## "
+               , " # "
+               , " @ "
+               ]
+
+             addCommand $ move dwarf' (from2d (0,1))
+             executeGameStep
+             levelShouldBe $ unlines
+               [ "## "
+               , "@# "
+               , "   "
+               ]
+
         e `shouldSatisfy` isRight
 
       it "cannot be executed if the destination is blocked" $ do
 
-        pending
-
-        e' <- runErrorT $ flip execStateT level $ do
-          addCommand $ move dwarfId (from2d (1,1))
+        e' <- runErrorT $ flip runCommandScheduler level $ do
+          addCommand $ move dwarf' (from2d (1,1))
           executeGameStep
         e' `shouldSatisfy` isLeft
 
-         
     describe "An Approach" $ do
       it "moves an actor in multiple game steps to a destination coordinate" $ do
 
-        pending
-
-        e <- runErrorT $ flip execStateT level $ do
-          lvl <- get
-          let Right exec = flip runReader lvl $ runErrorT $ approach dwarfId (from2d (2,0))
-          addCommand exec
+        e <- runErrorT $ flip runCommandScheduler level $ do
+          lvl <- use CS.level
+          c   <- runErrorT $ flip runReaderT lvl $ approach dwarf' (from2d (2,0))
+          addCommand $ case c of
+            Left e'  -> error $ "Could not find path: " ++ show e'
+            Right c' -> c'
           executeGameStep
-          show `shouldBe'` (unlines
+          levelShouldBe $ unlines
             [ "## "
             , " # "
             , " @ "
-            ])
+            ]
           executeGameStep
-          show `shouldBe'` (unlines
-            [ "## "
-            , " # "
-            , "  @"
-            ])
-          executeGameStep
-          show `shouldBe'` (unlines
+          levelShouldBe $ unlines
             [ "## "
             , " #@"
             , "   "
-            ])
+            ]
           executeGameStep
-          show `shouldBe'` (unlines
+          levelShouldBe $ unlines
             [ "##@"
             , " # "
             , "   "
-            ])
+            ]
           executeGameStep
-          show `shouldBe'` (unlines
+          levelShouldBe $ unlines
             [ "##@"
             , " # "
             , "   "
-            ])
+            ]
         e `shouldSatisfy` isRight

@@ -19,10 +19,12 @@ library
                        Task,
                        Level,
                        Level.Commands,
+                       Level.CommandScheduler,
                        Level.Task,
                        Actor,
                        Renderable,
                        StaticElement,
+                       Scheduler,
                        Unfold,
                        Queue,
                        Coords,
@@ -56,6 +58,7 @@ test-suite specs
                        QuickCheck,
                        mtl,
                        lens,
+                       transformers,
                        data-default == 0.5.*,
                        PSQueue == 1.1.*
 

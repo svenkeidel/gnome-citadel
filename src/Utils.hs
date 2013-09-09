@@ -1,9 +1,10 @@
-module Utils ( ifM
+module Utils ( runInState
              ) where
 
-ifM :: Monad m => m Bool -> a -> a -> m a
-ifM p a b = do
-  p' <- p
-  if p'
-    then return a
-    else return b
+import Control.Monad.State
+import Control.Monad.Reader
+
+runInState :: (MonadState s ms) => Reader s a -> ms a
+runInState r = do
+  env <- get
+  return $ runReader r env
