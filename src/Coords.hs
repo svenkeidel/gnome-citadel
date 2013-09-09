@@ -12,9 +12,13 @@ module Coords ( Coord (Coord)
 
 import Control.Lens.TH
 import Data.Monoid
+import Data.Hashable
 
 data Coord = Coord { _cx :: Int, _cy :: Int, _cz :: Int } deriving (Eq,Ord)
 makeLenses ''Coord
+
+instance Hashable Coord where
+  hashWithSalt i (Coord x y z) = hashWithSalt i (x,y,z)
 
 distance :: Coord -> Coord -> Double
 distance (Coord x1 y1 z1) (Coord x2 y2 z2) = sqrt $ xSum + ySum + zSum

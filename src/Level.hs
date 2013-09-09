@@ -35,7 +35,7 @@ import Control.Monad.Reader
 
 import qualified Control.Lens.Getter as LG
 import qualified Data.Sequence as S
-import qualified Data.Map as M
+import qualified Data.HashMap.Lazy as H
 
 import Data.Maybe(mapMaybe,fromMaybe)
 
@@ -49,14 +49,14 @@ import Queue
 import Renderable
 import Coords
 
-data Level = Level { _actors            :: M.Map Identifier Actor
-                   , _staticElements    :: M.Map Identifier StaticElement
+data Level = Level { _actors            :: H.HashMap Identifier Actor
+                   , _staticElements    :: H.HashMap Identifier StaticElement
                    , _nextFreeId        :: Identifier
                    , _activeTaskQueue   :: Queue Task
                    , _inactiveTaskQueue :: Queue Task
                    , _bounds            :: (Int, Int)
-                   , _idToCoord         :: M.Map Identifier Coord
-                   , _coordToId         :: M.Map Coord [Identifier]
+                   , _idToCoord         :: H.HashMap Identifier Coord
+                   , _coordToId         :: H.HashMap Coord [Identifier]
                    , _walkable          :: Level -> Coord -> Bool
                    }
 makeLenses ''Level
@@ -68,14 +68,14 @@ instance Show Level where
 emptyLevel :: Level
 emptyLevel =
   Level
-  { _actors = M.empty
-  , _staticElements = M.empty
+  { _actors = H.empty
+  , _staticElements = H.empty
   , _nextFreeId = 0
   , _activeTaskQueue = S.empty
   , _inactiveTaskQueue = S.empty
   , _bounds = (0, 0)
-  , _idToCoord = M.empty
-  , _coordToId = M.empty
+  , _idToCoord = H.empty
+  , _coordToId = H.empty
   , _walkable = error "walkable heuristik undefined"
   }
 
@@ -98,11 +98,11 @@ fromString builder str = execState (mapM insert coordStr) emptyLevel
     insert (coord,char) = do
       nextId <- freshId
       case builder char of
-        Just (Left  a) -> actors         %= M.insert nextId (actorId .~ nextId $ a)
-        Just (Right s) -> staticElements %= M.insert nextId (staticElementId .~ nextId $ s)
+        Just (Left  a) -> actors         %= H.insert nextId (actorId .~ nextId $ a)
+        Just (Right s) -> staticElements %= H.insert nextId (staticElementId .~ nextId $ s)
         Nothing        -> return ()
-      idToCoord %= M.insert nextId coord
-      coordToId %= M.insertWith (++) coord [nextId]
+      idToCoord %= H.insert nextId coord
+      coordToId %= H.insertWith (++) coord [nextId]
       bounds    %= maxT coord
 
 -- | turns a level into a string. It pads the regions that contain no
@@ -117,14 +117,14 @@ toString lvl = unlines $ (map . map) (render . at lvl) coords
 at :: Level -> Coord -> [Tile]
 at lvl coord = mapMaybe lookupTile ids
   where
-    ids = M.findWithDefault [] coord (lvl ^. coordToId)
-    lookupTile ident =  toTile <$> M.lookup ident (lvl ^. actors)
-                    <|> toTile <$> M.lookup ident (lvl ^. staticElements)
+    ids = fromMaybe [] $ H.lookup coord (lvl ^. coordToId)
+    lookupTile ident =  toTile <$> H.lookup ident (lvl ^. actors)
+                    <|> toTile <$> H.lookup ident (lvl ^. staticElements)
 
 -- | gets the coordinate at whitch the given tile is located
 getCoord :: (TileRepr t, Functor m, MonadReader Level m) => t -> m Coord
 getCoord tile = fromMaybe (error $ "the identifer '" ++ show (toTile tile) ++ "' has no assigned coordinate")
-              . M.lookup idT <$> LG.view idToCoord
+              . H.lookup idT <$> LG.view idToCoord
   where
     idT = toTile tile ^. tileId
 
@@ -153,4 +153,4 @@ findPath from to = do
 -- | filters actors of a level by a predicate and returns the
 -- satisfying actors as a list.
 findActor :: (Functor m, MonadReader Level m) => (Actor -> Bool) -> m [Actor]
-findActor f = (M.elems . M.filter f) <$> LG.view actors
+findActor f = (H.elems . H.filter f) <$> LG.view actors

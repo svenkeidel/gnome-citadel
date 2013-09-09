@@ -13,7 +13,7 @@ import Control.Applicative
 import qualified Data.Monoid as DM
 import qualified Data.Foldable as F
 import qualified Data.Sequence as S
-import qualified Data.Map as M
+import qualified Data.HashMap.Lazy as H
 
 import Level
 import Task
@@ -28,7 +28,7 @@ createTask coord tType = do
                        then activeTaskQueue
                        else inactiveTaskQueue
   targetQueue %= enqueue task
-  idToCoord %= M.insert nextId coord
+  idToCoord %= H.insert nextId coord
   return task
 
 hasTask :: Identifier -> Level -> Bool
@@ -41,7 +41,7 @@ getTask :: Identifier -> Level -> Maybe (Coord,Task)
 getTask tId lvl = (,) <$> taskCoordinate <*> foundTask
   where
     taskCoordinate :: Maybe Coord
-    taskCoordinate = M.lookup tId (lvl ^. idToCoord)
+    taskCoordinate = H.lookup tId (lvl ^. idToCoord)
 
     foundTask :: Maybe Task
     foundTask = useFirst [ findTaskInQueue activeTaskQueue

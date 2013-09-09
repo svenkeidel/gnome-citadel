@@ -32,6 +32,8 @@ library
                        Path.Internal
   Build-depends:       base ==4.*,
                        containers,
+                       unordered-containers,
+                       hashable,
                        lens,
                        mtl,
                        PSQueue == 1.1.*,
