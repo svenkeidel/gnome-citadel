@@ -44,31 +44,28 @@ spec = describe "An Execution" $ do
           lvl <- use CS.level
           lift $ lift $ show lvl `shouldBe` s
 
+        gameStepShouldChangeLevelTo s = executeGameStep >> levelShouldBe (unlines s)
+
         isRight (Right _) = True
         isRight _         = False
         isLeft = not . isRight
 
-    describe "A Move" $ do  
+    describe "A Move" $ do
       it "moves an actor in one step to an adjacent coordinate" $ do
-
 
         e <- runErrorT $ flip runCommandScheduler level $ do
 
              addCommand $ move dwarf' (from2d (1,2))
-             executeGameStep
-             levelShouldBe $ unlines
-               [ "## "
-               , " # "
-               , " @ "
-               ]
+             gameStepShouldChangeLevelTo [ "## "
+                                         , " # "
+                                         , " @ "
+                                         ]
 
              addCommand $ move dwarf' (from2d (0,1))
-             executeGameStep
-             levelShouldBe $ unlines
-               [ "## "
-               , "@# "
-               , "   "
-               ]
+             gameStepShouldChangeLevelTo [ "## "
+                                         , "@# "
+                                         , "   "
+                                         ]
 
         e `shouldSatisfy` isRight
 
@@ -79,7 +76,7 @@ spec = describe "An Execution" $ do
           executeGameStep
         e' `shouldSatisfy` isLeft
 
-    describe "An Approach" $ do
+    describe "An Approach" $
       it "moves an actor in multiple game steps to a destination coordinate" $ do
 
         e <- runErrorT $ flip runCommandScheduler level $ do
@@ -88,28 +85,24 @@ spec = describe "An Execution" $ do
           addCommand $ case c of
             Left e'  -> error $ "Could not find path: " ++ show e'
             Right c' -> c'
-          executeGameStep
-          levelShouldBe $ unlines
-            [ "## "
-            , " # "
-            , " @ "
-            ]
-          executeGameStep
-          levelShouldBe $ unlines
-            [ "## "
-            , " #@"
-            , "   "
-            ]
-          executeGameStep
-          levelShouldBe $ unlines
-            [ "##@"
-            , " # "
-            , "   "
-            ]
-          executeGameStep
-          levelShouldBe $ unlines
-            [ "##@"
-            , " # "
-            , "   "
-            ]
+          gameStepShouldChangeLevelTo [ "## "
+                                      , " # "
+                                      , " @ "
+                                      ]
+
+          gameStepShouldChangeLevelTo [ "## "
+                                      , " #@"
+                                      , "   "
+                                      ]
+
+          gameStepShouldChangeLevelTo [ "##@"
+                                      , " # "
+                                      , "   "
+                                      ]
+
+          gameStepShouldChangeLevelTo [ "##@"
+                                      , " # "
+                                      , "   "
+                                      ]
+
         e `shouldSatisfy` isRight
