@@ -8,7 +8,6 @@ import Test.Hspec
 import Level
 import Renderable
 import Tile
-import Coords
 
 main :: IO ()
 main = hspec spec
@@ -23,8 +22,9 @@ spec = describe "A Level" $ do
           ]
         levelBuilder char =
           case char of
-              '#' -> Right wall
-              '@' -> Left dwarf
+              '#' -> Just $ Right wall
+              ' ' -> Just $ Right free
+              '@' -> Just $ Left dwarf
               _   -> error ("unrecognized char " ++ show char)
         level = fromString levelBuilder levelString
 
@@ -32,8 +32,8 @@ spec = describe "A Level" $ do
       render (head $ level `at` from2d (1,1)) `shouldBe` '#'
       render (head $ level `at` from2d (0,2)) `shouldBe` '@'
       render (head $ level `at` from2d (2,0)) `shouldBe` '#'
-      null (level `at` from2d (1,2)) `shouldBe` True
-      null (level `at` from2d (0,1)) `shouldBe` True
+      render (head $ level `at` from2d (0,1)) `shouldBe` ' '
+      render (head $ level `at` from2d (1,2)) `shouldBe` ' '
 
     it "can generate fresh identifiers" $ do
       let ((n1, n2, n3), level') = runState generateFreshIdentifiers level

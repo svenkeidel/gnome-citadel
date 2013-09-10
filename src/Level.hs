@@ -11,24 +11,33 @@ module Level ( Level (..)
              , bounds
              , idToCoord
              , coordToId
+             , walkable
 
              , fromString
              , at
              , freshId
              , findPath
+             , getCoord
+             , findActor
 
+             , (^->)
+
+             , module Coords
+             , module Types
              ) where
 
-import Control.Lens ((^.),(%=),(<+=))
+
+import Control.Lens ((^.),(%=),(<+=),(.~))
 import Control.Lens.TH
 import Control.Monad.State
 import Control.Applicative
-import Control.Monad.Reader.Class
+import Control.Monad.Reader
 
+import qualified Control.Lens.Getter as LG
 import qualified Data.Sequence as S
 import qualified Data.Map as M
 
-import Data.Maybe(mapMaybe)
+import Data.Maybe(mapMaybe,fromMaybe)
 
 import Path
 import Actor
@@ -48,6 +57,7 @@ data Level = Level { _actors            :: M.Map Identifier Actor
                    , _bounds            :: (Int, Int)
                    , _idToCoord         :: M.Map Identifier Coord
                    , _coordToId         :: M.Map Coord [Identifier]
+                   , _walkable          :: Level -> Coord -> Bool
                    }
 makeLenses ''Level
 
@@ -66,36 +76,44 @@ emptyLevel =
   , _bounds = (0, 0)
   , _idToCoord = M.empty
   , _coordToId = M.empty
+  , _walkable = error "walkable heuristik undefined"
   }
 
+-- | returns a fresh identifier that is used to refernce tiles inside
+-- the level.
 freshId :: MonadState Level m => m Int
 freshId = nextFreeId <+= 1
 
-type TileBuilder = Char -> Either Actor StaticElement
+type TileBuilder = Char -> Maybe (Either Actor StaticElement)
 
+-- | turns the given string into a level. It uses a builder function
+-- that returns actors or static elements based on the characters that
+-- the string contains.
 fromString :: TileBuilder -> String -> Level
 fromString builder str = execState (mapM insert coordStr) emptyLevel
   where
-    coordStr               = concat $ (zipWith . zipWith) (,) coords (lines str)
-    coords                 = [ [ from2d (x,y) | x <- [0..] ] | y <- [0..] ] :: [[Coord]]
+    coordStr            = concat $ (zipWith . zipWith) (,) coords (lines str)
+    coords              = [ [ from2d (x,y) | x <- [0..] ] | y <- [0..] ] :: [[Coord]]
     maxT (Coord x1 y1 _) (x2,y2) = (max x1 x2, max y1 y2)
-    insert (coord,char)
-      | char == ' ' = return ()
-      | otherwise   = do
-          nextId <- freshId
-          case builder char of
-            Left  a -> actors         %= M.insert nextId a
-            Right s -> staticElements %= M.insert nextId s
-          idToCoord %= M.insert nextId coord
-          coordToId %= M.insertWith (++) coord [nextId]
-          bounds    %= maxT coord
+    insert (coord,char) = do
+      nextId <- freshId
+      case builder char of
+        Just (Left  a) -> actors         %= M.insert nextId (actorId .~ nextId $ a)
+        Just (Right s) -> staticElements %= M.insert nextId (staticElementId .~ nextId $ s)
+        Nothing        -> return ()
+      idToCoord %= M.insert nextId coord
+      coordToId %= M.insertWith (++) coord [nextId]
+      bounds    %= maxT coord
 
+-- | turns a level into a string. It pads the regions that contain no
+-- tiles with spaces until the maximum coordinates are reached.
 toString :: Level -> String
 toString lvl = unlines $ (map . map) (render . at lvl) coords
   where
     (mx,my) = lvl ^. bounds
     coords  = [ [ from2d (x,y) | x <- [0..mx] ] | y <- [0..my] ] :: [[Coord]]
 
+-- | returns a list of tiles located at the given coordinate inside the level
 at :: Level -> Coord -> [Tile]
 at lvl coord = mapMaybe lookupTile ids
   where
@@ -103,8 +121,36 @@ at lvl coord = mapMaybe lookupTile ids
     lookupTile ident =  toTile <$> M.lookup ident (lvl ^. actors)
                     <|> toTile <$> M.lookup ident (lvl ^. staticElements)
 
-findPath :: (MonadReader Level m) => Coord -> Coord -> m (Maybe Path)
+-- | gets the coordinate at whitch the given tile is located
+getCoord :: (TileRepr t, Functor m, MonadReader Level m) => t -> m Coord
+getCoord tile = fromMaybe (error $ "the identifer '" ++ show (toTile tile) ++ "' has no assigned coordinate")
+              . M.lookup idT <$> LG.view idToCoord
+  where
+    idT = toTile tile ^. tileId
+
+-- | dereferences a 'method' of a type
+-- useful when a field of a record takes the record itself as a first parameter:
+--
+-- @
+-- data Level =
+--   Level {
+--     walkable :: Level -> Coord -> Bool
+--     ...
+--   }
+-- @
+--
+-- >>> lvl ^-> walkable $ (1,3)
+(^->) :: s -> LG.Getting (s -> a) s (s -> a) -> a
+s ^-> a = (s ^. a) s
+
+-- | searches a path from one coordinate in a level to another. It
+-- uses the walkable heuristik to find a suitable path.
+findPath :: MonadReader Level m => Coord -> Coord -> m (Maybe Path)
 findPath from to = do
   level <- ask
-  let check = undefined level
-  return $ defaultPath check from to
+  return $ defaultPath (level ^-> walkable) from to
+
+-- | filters actors of a level by a predicate and returns the
+-- satisfying actors as a list.
+findActor :: (Functor m, MonadReader Level m) => (Actor -> Bool) -> m [Actor]
+findActor f = (M.elems . M.filter f) <$> LG.view actors
