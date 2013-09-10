@@ -27,8 +27,8 @@ empty = Scheduler []
 add :: MonadState (Scheduler u a) m => u a -> m ()
 add u = unfolds %= (u:)
 
--- | unfolds the all stored 'Unfold's and returns all produced values
--- in a list. The order in which the produced values of the different
+-- | unfolds all stored 'Unfold's and returns the produced values
+-- as a list. The order in which the produced values of the different
 -- unfolds are returned may change between different calls of this
 -- function.
 next :: (U.Unfoldable u, Functor m, MonadState (Scheduler u a) m) => m [a]
@@ -42,4 +42,3 @@ next = do
       case U.next u of
            U.Yield a u' ->  go (a:as) (u':us') us
            U.Done       ->  go    as      us'  us
-

@@ -129,7 +129,7 @@ getCoord tile = fromMaybe (error $ "the identifer '" ++ show (toTile tile) ++ "'
     idT = toTile tile ^. tileId
 
 -- | dereferences a 'method' of a type
--- usefull when a field of a record takes the record itself as a first parameter:
+-- useful when a field of a record takes the record itself as a first parameter:
 --
 -- @
 -- data Level =
@@ -138,7 +138,7 @@ getCoord tile = fromMaybe (error $ "the identifer '" ++ show (toTile tile) ++ "'
 --     ...
 --   }
 -- @
--- 
+--
 -- >>> lvl ^-> walkable $ (1,3)
 (^->) :: s -> LG.Getting (s -> a) s (s -> a) -> a
 s ^-> a = (s ^. a) s
