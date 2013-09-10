@@ -34,7 +34,7 @@ runCommandScheduler s lvl = do
 
 -- | Adds a command to a schedule. The command is not executed immediately.
 addCommand :: (Monad m, MonadState (CommandScheduler m) ms) => Command (LevelState m) -> ms ()
-addCommand c = scheduler %= (execState $ S.add c)
+addCommand c = scheduler %= execState (S.add c)
 
 -- | Applies the upcomming sequence of commands to the level. Lifts
 -- all effects into the base monad of the state transformer.

@@ -79,7 +79,7 @@ instance Monad Unfold where
     where
       next' (Left u1) =
         case next u1 of
-          Yield a u1' -> next' $ Right $ (u1',f a)
+          Yield a u1' -> next' $ Right (u1',f a)
           Done      -> Done
       next' (Right (u1,u2)) =
         case next u2 of
@@ -93,7 +93,7 @@ instance F.Foldable Unfold where
       Done       -> b
 
 instance T.Traversable Unfold where
-  traverse f u = unfold <$> (T.sequenceA $ F.foldMap (pure . f) u) <*> pure unfoldList
+  traverse f u = unfold <$> T.sequenceA (F.foldMap (pure . f) u) <*> pure unfoldList
 
 toList :: Unfold a -> [a]
 toList = reverse . F.foldr (:) []

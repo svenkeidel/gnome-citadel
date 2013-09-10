@@ -55,7 +55,7 @@ instance Error (MoveError t) where
   strMsg = MoveError
 
 instance Show t => Show (MoveError t) where
-  show (PathBlocked t c) = show $ 
+  show (PathBlocked t c) = show
     (MoveError $ "The destination " ++ show c ++ " for the move of " ++ show t ++ " is blocked" :: MoveError ())
   show (MoveError s)     = "MoveError: " ++ s
 
@@ -68,7 +68,7 @@ move t dest =
     lvl <- get
     if lvl ^-> walkable $ dest
       then do
-        let idT = (toTile t) ^. tileId
+        let idT = toTile t ^. tileId
         idToCoord %= M.insert idT dest
         coordToId %= M.adjust (L.delete idT) src
         coordToId %= M.adjust (idT :) dest
