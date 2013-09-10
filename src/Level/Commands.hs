@@ -10,7 +10,7 @@ import Control.Applicative
 
 import Data.Monoid
 
-import qualified Data.Map as M
+import qualified Data.HashMap.Lazy as H
 import qualified Data.List as L
 
 import Level
@@ -73,9 +73,9 @@ move t dest =
     if lvl ^-> walkable $ dest
       then do
         let idT = toTile t ^. tileId
-        idToCoord %= M.insert idT dest
-        coordToId %= M.adjust (L.delete idT) src
-        coordToId %= M.adjust (idT :) dest
+        idToCoord %= H.insert idT dest
+        coordToId %= H.adjust (L.delete idT) src
+        coordToId %= H.adjust (idT :) dest
       else throwError $ PathBlocked t dest
 
 tryCommand :: (Error e, Functor m) => Command (ErrorT e m ()) -> Command (m ())
