@@ -1,11 +1,19 @@
 import Criterion.Config
 import Criterion.Main
 
+import Data.Monoid
+
 import Path
 import Coords
 
+config = defaultConfig {
+  cfgReport = Last $ Just "dist/a-star.html"
+}
+
 main :: IO ()
-main = defaultMain
+main = defaultMainWith
+  config
+  (return ())
   [ bench "Straight path in open space" $ nf (twoDimSearchOpen (0,0)) (5000,5000)
   , bench "Around a wall" $
       nf (twoDimSearch simpleWall (1,0)) (-1,0)

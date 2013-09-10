@@ -4,7 +4,6 @@ import Test.Hspec
 import Level
 import Level.Task
 import Task
-import Coords
 
 import Data.Ord (comparing)
 import Control.Monad.State

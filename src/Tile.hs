@@ -11,7 +11,7 @@ import Control.Lens.TH
 data Tile = Tile
           { _tileId :: Identifier
           , _tileCharRepr :: Char
-          }
+          } deriving Show
 makeLenses ''Tile
 
 class TileRepr t where
@@ -22,6 +22,9 @@ instance TileRepr StaticElement where
 
 instance TileRepr Actor where
   toTile = Tile <$> view actorId <*> view actorCharRepr
+
+instance TileRepr Tile where
+  toTile = id
 
 wall :: StaticElement
 wall = StaticElement undefined '#'
