@@ -2,6 +2,7 @@ module Path ( searchPath
             , existsPath
             , pathCost
             , defaultPath
+            , findArea
 
             , Path (Path)
             , pathLength
@@ -50,6 +51,11 @@ pathCost w h step start goal = fmap (view pathLength) (searchPath w h step start
 defaultPath :: (Coord -> Bool) -> Coord -> Coord -> Maybe Path
 defaultPath predicate start goal =
   searchPath predicate (distance goal) (const . const $ 1) start goal
+
+-- | Finds a path to a nearest coordinate that is part of the
+-- specified area.
+findArea :: (Coord -> Bool) -> Coord -> [Coord] -> Maybe Path
+findArea = undefined
 
 -- private helper
 pathFinderSearch :: (Coord -> Bool)

@@ -192,3 +192,45 @@ spec = describe "Path finding functionality" $ do
                                                   , (5,4)
                                                   , (4,5), (3,5), (2,5), (1,5), (0,5)
                                                   ]))
+
+
+
+
+    {-
+         0   1   2   3   4   5
+       +---+---+---+---+---+---+
+     0 |   | X | X | X | X |   |
+       +---+---+---+---+---+---+
+     1 |   | X | X | X | X |   |
+       +---+---+---+---+---+---+
+     2 |   | . | . |:X:| . |   |
+       +---+---+---+---+---+---+
+     3 | . | X | X | X | X | . |
+       +---+---+---+---+---+---+
+     4 |   | . | . |   | . |   |
+       +---+---+---+---+---+---+
+     5 |   |   |   | S |   |   |
+       +---+---+---+---+---+---+
+
+       This example shows an location with two possible ways from the startingpoint 'S'
+       to an area around :X:. The algorithm should choose the east route because it is
+       much shorter.
+       
+    -}
+    it "should find a path to an area" $ do
+
+      pending
+      
+      let start   = from2d (3, 5)
+          goal    = map from2d [(2, 2), (4,2)]
+          blocked = map from2d $ [(x,y) | x <- [1..4], y <- [0,1,3]] ++ [(2,3)]
+          allowed c@(Coord x y z) = c `notElem` blocked
+                                 && z == 0
+                                 && x `elem` [0..5]
+                                 && y `elem` [0..5]
+          path    = findArea allowed start goal
+      path `shouldBe` (Just $ Path 4 (map from2d [ (3,5)
+                                                 , (4,4)
+                                                 , (5,3)
+                                                 , (4,2)
+                                                 ]))
