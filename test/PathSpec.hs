@@ -223,7 +223,7 @@ spec = describe "Path finding functionality" $ do
       
       let start   = from2d (3, 5)
           goal    = map from2d [(2, 2), (4,2)]
-          blocked = map from2d $ [(x,y) | x <- [1..4], y <- [0,1,3]] ++ [(2,3)]
+          blocked = map from2d $ [(x,y) | x <- [1..4], y <- [0,1,3]] ++ [(3,2)]
           allowed c@(Coord x y z) = c `notElem` blocked
                                  && z == 0
                                  && x `elem` [0..5]
