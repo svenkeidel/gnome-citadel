@@ -20,8 +20,11 @@ pathFrom2d cost coords = Path cost (map from2d coords)
 
 spec :: Spec
 spec = describe "Path finding functionality" $ do
-  let pfConf = PathFinderConfig (const True) (const 0) (const .const $ 1) neighbors2d
+  let pfConf = PathFinderConfig (const True) (const 0)
+                                (const .const $ 1) neighbors2d
+                                (const False)
       pfState = def :: PathFinderState
+
   it "should be able to reconstruct the path, given a predecessor map" $ do
     let pmap = Map.fromList [ (from2d (0,0), (0, Nothing))
                             , (from2d (0,1), (0, Just $ from2d (0,0)))
@@ -191,8 +194,6 @@ spec = describe "Path finding functionality" $ do
                                             , (5,4)
                                             , (4,5), (3,5), (2,5), (1,5), (0,5)
                                             ])
-
-
 
 
     {-

@@ -74,6 +74,7 @@ data PathFinderConfig = PathFinderConfig { _canBeWalked :: Coord -> Bool
                                          , _heuristicCost :: Coord -> Score
                                          , _stepCost :: Coord -> Coord -> Cost
                                          , _neighbors :: Coord -> [Coord]
+                                         , _isGoal :: Coord -> Bool
                                          }
 makeLenses ''PathFinderConfig
 
@@ -100,10 +101,11 @@ evalPathFinder :: PathFinderConfig ->
                   a
 evalPathFinder c st a = fst $ runPathFinder c st a
 
-findPath :: Coord -> Coord -> PathFinder (Maybe Path)
-findPath current goal =
-  if current == goal
-    then reconstructPath goal <$> use seen
+findPath :: Coord -> PathFinder (Maybe Path)
+findPath current = do
+  goalReached <- view isGoal <*> pure current
+  if goalReached
+    then reconstructPath current <$> use seen
     else do
       visit current
       nbs <- expand current
@@ -112,7 +114,7 @@ findPath current goal =
       ifGreaterZero nodesLeft $ do
         Just (nextMin PSQ.:-> _, queue) <- PSQ.minView <$> use open
         open .= queue
-        findPath nextMin goal
+        findPath nextMin
   where
     ifGreaterZero :: Monad m => Int -> m (Maybe a) -> m (Maybe a)
     ifGreaterZero n action = if n == 0
