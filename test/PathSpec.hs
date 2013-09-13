@@ -218,7 +218,6 @@ spec = describe "Path finding functionality" $ do
 
     -}
     it "should find a path to an area" $ do
-      pending
       let start   = from2d (3, 5)
           goal    = map from2d [(2, 2), (4,2)]
           blocked = map from2d $ [(x,y) | x <- [1..4], y <- [0,1,3]] ++ [(3,2)]
@@ -227,7 +226,7 @@ spec = describe "Path finding functionality" $ do
                                  && x `elem` [0..5]
                                  && y `elem` [0..5]
           path    = findArea allowed start goal
-      path `shouldBe` (Just $ pathFrom2d 4 [ (3,5)
+      path `shouldBe` (Just $ pathFrom2d 3 [ (3,5)
                                            , (4,4)
                                            , (5,3)
                                            , (4,2)
