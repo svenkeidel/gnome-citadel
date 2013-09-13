@@ -55,6 +55,7 @@ defaultPath walkable start goal =
 -- | Finds a path to a nearest coordinate that is part of the
 -- specified area.
 findArea :: (Coord -> Bool) -> Coord -> [Coord] -> Maybe Path
+findArea _ _ [] = Nothing
 findArea walkable start goals =
   searchPath walkable heuristic (const . const $ 1) start (`elem` goals)
   where

@@ -6,7 +6,7 @@ import Path
 import Path.Internal
 import Data.List (sort)
 import Data.Default
-import Data.Maybe (isJust)
+import Data.Maybe (isJust,isNothing)
 import qualified Data.Map as Map
 import qualified Data.PSQueue as PSQ
 
@@ -231,3 +231,9 @@ spec = describe "Path finding functionality" $ do
                                            , (5,3)
                                            , (4,2)
                                            ])
+
+    it "should return nothing if the goal area is empty" $ do
+      let start   = from2d (0, 0)
+          goals    = []
+          path    = findArea (const True) start goals
+      path `shouldSatisfy` isNothing
