@@ -11,6 +11,8 @@ import Control.Applicative
 import Safe (tailSafe)
 import Data.Monoid
 
+import qualified Data.Traversable as DT
+
 import Level
 import Path(pathCoords)
 import Actor
@@ -63,7 +65,7 @@ approach :: (Applicative m, MonadReader Level m, MonadError ApproachError m)
 approach actor dest = do
   maybePath <- view =<< findArea <$> view (coordOf actor) <*> destCoords
   case maybePath of
-    Just path -> commandT $ mconcat [ move actor coord | coord <- tailSafe $ path ^. pathCoords ]
+    Just path -> commandT $ DT.foldMapDefault (move actor) (tailSafe $ path ^. pathCoords)
     Nothing   -> throwError $ PathNotFound actor dest
   where
     destCoords = do
