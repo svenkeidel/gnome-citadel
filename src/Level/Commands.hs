@@ -8,11 +8,11 @@ import Control.Monad.State
 import Control.Monad.Error
 import Control.Applicative
 
-import Data.Monoid
 import Safe (tailSafe)
 
 import qualified Data.Map as M
 import qualified Data.List as L
+import qualified Data.Traversable as DT
 
 import Level
 import Path
@@ -46,8 +46,7 @@ approach :: (Applicative m1, MonadReader Level m1, MonadError ApproachError m1,
 approach actor dest = do
   maybePath <- join $ findPath <$> getCoord actor <*> pure dest
   case maybePath of
-    Just path -> return $ mconcat [ move actor coord
-                                  | coord <- tailSafe $ path ^. pathCoords ]
+    Just path -> return $ DT.foldMapDefault (move actor) (tailSafe $ path ^. pathCoords)
     Nothing   -> throwError $ PathNotFound actor dest
 
 data MoveError t
