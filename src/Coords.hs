@@ -8,10 +8,12 @@ module Coords ( Coord (Coord)
               , distance
 
               , SumCoord (..)
+              , (|+|)
               ) where
 
 import Control.Lens.TH
 import Data.Monoid
+import Data.Function(on)
 
 data Coord = Coord { _cx :: Int, _cy :: Int, _cz :: Int } deriving (Eq,Ord)
 makeLenses ''Coord
@@ -32,6 +34,10 @@ instance Monoid SumCoord where
   mempty = SumCoord $ Coord 0 0 0
   mappend (SumCoord (Coord x1 y1 z1)) (SumCoord (Coord x2 y2 z2)) =
     SumCoord $ Coord (x1+x2) (y1+y2) (z1+z2)
+
+infixl 6 |+|
+(|+|) :: Coord -> Coord -> Coord
+c1 |+| c2 = getSumCoord $ on mappend SumCoord c1 c2
 
 from2d :: (Int,Int) -> Coord
 from2d (x,y) = Coord x y 0

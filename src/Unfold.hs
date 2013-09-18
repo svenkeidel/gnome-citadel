@@ -1,4 +1,8 @@
-{-# LANGUAGE RankNTypes, ExistentialQuantification #-}
+{-# LANGUAGE RankNTypes,
+             ExistentialQuantification,
+             FlexibleInstances,
+             MultiParamTypeClasses,
+             UndecidableInstances #-}
 module Unfold ( Unfoldable(..)
               , Step(..)
               , Unfold
@@ -13,6 +17,9 @@ import Data.Monoid
 import Control.Applicative
 import Control.Monad
 import Control.Monad.Trans
+import Control.Monad.Reader
+import Control.Monad.State
+import Control.Monad.Error
 import qualified Data.Foldable as F
 import qualified Data.Traversable as T
 
@@ -140,3 +147,25 @@ instance Applicative m => Monoid (UnfoldT m a) where
 
 instance MonadTrans UnfoldT where
   lift m = UnfoldT (return `liftM` m)
+
+mapUnfoldT :: (m (Unfold a) -> n (Unfold b)) -> UnfoldT m a -> UnfoldT n b
+mapUnfoldT f = UnfoldT . f . runUnfoldT
+
+instance (Applicative m, MonadReader r m) => MonadReader r (UnfoldT m) where
+  ask    = lift ask
+  local  = mapUnfoldT . local
+  reader = lift . reader
+
+instance (Applicative m, MonadState s m) => MonadState s (UnfoldT m) where
+  get   = lift get
+  put   = lift . put
+  state = lift . state
+
+
+liftCatch :: (m (Unfold a) -> (e -> m (Unfold a)) -> m (Unfold a)) ->
+    UnfoldT m a -> (e -> UnfoldT m a) -> UnfoldT m a
+liftCatch f m h = UnfoldT $ f (runUnfoldT m) (runUnfoldT . h)
+
+instance (Applicative m, MonadError e m) => MonadError e (UnfoldT m) where
+  throwError = lift . throwError
+  catchError = liftCatch catchError

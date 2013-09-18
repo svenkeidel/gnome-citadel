@@ -20,7 +20,7 @@ main = defaultMainWith
   ]
 
 twoDimSearch :: (Coord -> Bool) -> (Int,Int) -> (Int,Int) -> Maybe Path
-twoDimSearch p start goal = searchPath p heur (const . const $ 1) (from2d start) (from2d goal)
+twoDimSearch p start goal = searchPath p heur (const . const $ 1) (from2d start) (== from2d goal)
   where heur = simpleDistance (from2d goal)
 
 simpleDistance (Coord x y z) (Coord x2 y2 z2) = fromIntegral $ sum . map abs $ [x-x2,y-y2,z-z2]

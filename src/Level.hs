@@ -1,4 +1,4 @@
-{-# LANGUAGE TemplateHaskell, RankNTypes, FlexibleContexts #-}
+{-# LANGUAGE TemplateHaskell, RankNTypes, FlexibleContexts, ScopedTypeVariables #-}
 module Level ( Level (..)
              , emptyLevel
 
@@ -16,11 +16,11 @@ module Level ( Level (..)
              , fromString
              , at
              , freshId
+             , coordOf
              , findPath
-             , getCoord
+             , findArea
              , findActor
-
-             , (^->)
+             , isWalkable
 
              , module Coords
              , module Types
@@ -31,7 +31,6 @@ import Control.Lens ((^.),(%=),(<+=),(.~))
 import Control.Lens.TH
 import Control.Monad.State
 import Control.Applicative
-import Control.Monad.Reader
 
 import qualified Control.Lens.Getter as LG
 import qualified Data.Sequence as S
@@ -39,7 +38,6 @@ import qualified Data.Map as M
 
 import Data.Maybe(mapMaybe,fromMaybe)
 
-import Path
 import Actor
 import StaticElement
 import Types
@@ -48,6 +46,9 @@ import Task
 import Queue
 import Renderable
 import Coords
+import Utils
+
+import qualified Path as P
 
 data Level = Level { _actors            :: M.Map Identifier Actor
                    , _staticElements    :: M.Map Identifier StaticElement
@@ -122,35 +123,23 @@ at lvl coord = mapMaybe lookupTile ids
                     <|> toTile <$> M.lookup ident (lvl ^. staticElements)
 
 -- | gets the coordinate at whitch the given tile is located
-getCoord :: (TileRepr t, Functor m, MonadReader Level m) => t -> m Coord
-getCoord tile = fromMaybe (error $ "the identifer '" ++ show (toTile tile) ++ "' has no assigned coordinate")
-              . M.lookup idT <$> LG.view idToCoord
-  where
-    idT = toTile tile ^. tileId
+coordOf :: (TileRepr t) => t -> LG.Getter Level Coord
+coordOf tile = LG.to $ \(lvl :: Level) ->
+  fromMaybe (error $ "the identifer '" ++ show (toTile tile) ++ "' has no assigned coordinate")
+  $ M.lookup (toTile tile ^. tileId) (lvl ^. idToCoord)
 
--- | dereferences a 'method' of a type
--- useful when a field of a record takes the record itself as a first parameter:
---
--- @
--- data Level =
---   Level {
---     walkable :: Level -> Coord -> Bool
---     ...
---   }
--- @
---
--- >>> lvl ^-> walkable $ (1,3)
-(^->) :: s -> LG.Getting (s -> a) s (s -> a) -> a
-s ^-> a = (s ^. a) s
+isWalkable :: Coord -> LG.Getter Level Bool
+isWalkable c = LG.to (\lvl -> (_walkable lvl) lvl c)
 
 -- | searches a path from one coordinate in a level to another. It
 -- uses the walkable heuristik to find a suitable path.
-findPath :: MonadReader Level m => Coord -> Coord -> m (Maybe Path)
-findPath from to = do
-  level <- ask
-  return $ defaultPath (level ^-> walkable) from to
+findPath :: Coord -> Coord -> LG.Getter Level (Maybe P.Path)
+findPath from to = LG.to (\lvl -> P.defaultPath (lvl ^-> walkable) from to)
+
+findArea :: Coord -> [Coord] -> LG.Getter Level (Maybe P.Path)
+findArea from to = LG.to (\lvl -> P.findArea (lvl ^-> walkable) from to)
 
 -- | filters actors of a level by a predicate and returns the
 -- satisfying actors as a list.
-findActor :: (Functor m, MonadReader Level m) => (Actor -> Bool) -> m [Actor]
-findActor f = (M.elems . M.filter f) <$> LG.view actors
+findActor :: (Actor -> Bool) -> LG.Getter Level [Actor]
+findActor f = LG.to (\lvl -> M.elems $ M.filter f $ lvl ^. actors)
