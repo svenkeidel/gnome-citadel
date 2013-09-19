@@ -12,11 +12,12 @@ import Data.Maybe(isJust)
 import Test.Hspec
 
 import Level
-import Level.Commands
-import Level.CommandScheduler hiding (level)
-import qualified Level.CommandScheduler as CS
+import Level.Command
+import Level.Scheduler hiding (level)
 import Tile
 import Renderable
+
+import qualified Level.Scheduler as CS
 
 main :: IO ()
 main = hspec spec
@@ -48,40 +49,17 @@ spec = describe "An Execution" $ do
 
         isRight (Right _) = True
         isRight _         = False
-        isLeft = not . isRight
+        --isLeft = not . isRight
 
         approach' actor coord = do
           lvl <- use CS.level
-          c <- runErrorT $ flip runReaderT lvl $ runCommandT $ approach actor coord
+          c <- runErrorT
+             $ flip runReaderT lvl
+             $ runCommandT
+             $ approach actor coord
           addCommand $ case c of
             Left e'  -> error $ "Could not find path: " ++ show e'
             Right c' -> c'
-
-    describe "A Move" $ do
-      it "moves an actor in one step to an adjacent coordinate" $ do
-
-        e <- runErrorT $ flip runCommandScheduler level $ do
-
-             addCommand $ move dwarf' (from2d (1,2))
-             gameStepShouldChangeLevelTo [ "## "
-                                         , " # "
-                                         , " @ "
-                                         ]
-
-             addCommand $ move dwarf' (from2d (0,1))
-             gameStepShouldChangeLevelTo [ "## "
-                                         , "@# "
-                                         , "   "
-                                         ]
-
-        e `shouldSatisfy` isRight
-
-      it "cannot be executed if the destination is blocked" $ do
-
-        e' <- runErrorT $ flip runCommandScheduler level $ do
-          addCommand $ move dwarf' (from2d (1,1))
-          executeGameStep
-        e' `shouldSatisfy` isLeft
 
     describe "An Approach" $ do
       it "moves an actor in multiple game steps to a destination coordinate" $ do

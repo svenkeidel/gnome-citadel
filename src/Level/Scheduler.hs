@@ -1,25 +1,28 @@
 {-# LANGUAGE TemplateHaskell, RankNTypes, FlexibleContexts, ScopedTypeVariables #-}
-module Level.CommandScheduler ( CommandScheduler
-                              , level
-                              , runCommandScheduler
-                              , addCommand
-                              , executeGameStep
-                              ) where
+module Level.Scheduler ( CommandScheduler
+                       , level
+                       , runCommandScheduler
+                       , addCommand
+                       , executeGameStep
+                       ) where
 
 import Control.Lens ((^.),(%=),assign,zoom,use)
 import Control.Lens.TH
 import Control.Monad.State
 import Control.Monad.Error
 
+import Data.Functor.Identity
+
 import Unfold
 import Level
-import Level.Commands
+import Level.Transformation (LevelTrans,LevelError)
+import Level.Command (Command)
 
 import qualified Scheduler as S
 
 data CommandScheduler =
   CommandScheduler
-  { _scheduler :: S.Scheduler Unfold LevelTrans
+  { _scheduler :: S.Scheduler Unfold (LevelTrans Identity)
   , _level     :: Level
   }
 makeLenses ''CommandScheduler
@@ -39,4 +42,10 @@ addCommand c = scheduler %= execState (S.add c)
 executeGameStep :: (Functor m, Monad m) => StateT CommandScheduler (ErrorT LevelError m) ()
 executeGameStep = do
   transformations <- zoom scheduler S.next
-  assign level =<< lift . ErrorT . return . execStateT (sequence_ transformations) =<< use level
+  assign level =<< lift
+                 . ErrorT
+                 . return
+                 . runIdentity
+                 . runErrorT
+                 . execStateT (sequence_ transformations)
+               =<< use level
