@@ -1,7 +1,7 @@
 {-# LANGUAGE FlexibleContexts #-}
 module Level.Command where
 
-import Control.Lens ((^.),use,view,contains)
+import Control.Lens ((^.),view)
 import Control.Monad.Error
 import Control.Monad.Reader
 import Control.Applicative
@@ -23,6 +23,9 @@ import Unfold
 import qualified Level.Transformation as T
 
 type Command = Unfold (LevelTrans Identity)
+
+command :: Monad m => LevelTrans Identity -> CommandT m
+command = commandT . return
 
 -- | A level transformation that is used by the command scheduler
 type CommandT m = UnfoldT m (LevelTrans Identity)
@@ -67,14 +70,16 @@ pickup actor item = do
   itemCoord <- view $ coordOf item
   mconcat
     [ approach actor itemCoord
-    , commandT $ return $ do
-          itemPresent <- use $ idToCoord . contains itemId
-          if itemPresent
-            then T.pickup actor item
-            else throwError $ ItemMissing actor item itemCoord
+    , command $ failOnMissingItem actor item itemCoord
+             >> T.pickup actor item
     ]
-  where
-    itemId = item ^. staticElementId
 
-mine :: Actor -> StaticElement -> CommandT m
-mine = undefined
+mine :: (Applicative m, MonadReader Level m, MonadError ApproachError m)
+     => Actor -> StaticElement -> CommandT m
+mine actor block = do
+  blockCoord <- view $ coordOf block
+  mconcat
+    [ approach actor blockCoord
+    , command $ failOnMissingItem actor block blockCoord
+             >> T.mine actor block
+    ]

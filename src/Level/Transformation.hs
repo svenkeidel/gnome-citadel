@@ -53,3 +53,9 @@ mine actor block = do
   deleteFromCoords block
   staticElements %= M.delete (block ^. staticElementId)
   move actor blockCoord
+
+failOnMissingItem :: (Monad m) => Actor -> StaticElement -> Coord -> LevelTrans m
+failOnMissingItem actor item oldCoord = do
+  actualCoord <- use $ coordOf item
+  let itemPresent = oldCoord == actualCoord
+  when (not itemPresent) $ throwError $ ItemMissing actor item oldCoord

@@ -89,3 +89,22 @@ spec = describe "A Level Transformation" $ do
                       ]
         
       e `shouldSatisfy` isRight
+
+  describe "Fail on item missing" $ do
+    it "fails if the item is not on the specified location" $ do
+      e <- runErrorT $ flip execStateT level $ do
+        wall' <- findWall (1,1)
+        failOnMissingItem dwarf' wall' (from2d (2,2))
+
+      e `shouldSatisfy` isLeft
+      
+    it "works with alternative" $ do
+      e <- runErrorT $ flip execStateT level $ do
+        wall' <- findWall (1,1)
+        failOnMissingItem dwarf' wall' (from2d (1,1)) >> move dwarf' (from2d (1,2))
+        levelShouldBe [ "## "
+                      , " # "
+                      , " @ "
+                      ]
+
+      e `shouldSatisfy` isRight

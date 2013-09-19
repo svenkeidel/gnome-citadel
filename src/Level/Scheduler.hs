@@ -3,12 +3,14 @@ module Level.Scheduler ( CommandScheduler
                        , level
                        , runCommandScheduler
                        , addCommand
+                       , addCommandT
                        , executeGameStep
                        ) where
 
 import Control.Lens ((^.),(%=),assign,zoom,use)
 import Control.Lens.TH
 import Control.Monad.State
+import Control.Monad.Reader
 import Control.Monad.Error
 
 import Data.Functor.Identity
@@ -16,7 +18,7 @@ import Data.Functor.Identity
 import Unfold
 import Level
 import Level.Transformation (LevelTrans,LevelError)
-import Level.Command (Command)
+import Level.Command (Command,CommandT,runCommandT)
 
 import qualified Scheduler as S
 
@@ -36,6 +38,17 @@ runCommandScheduler s lvl = do
 -- | Adds a command to a schedule. The command is not executed immediately.
 addCommand :: (Monad m, MonadState CommandScheduler m) => Command -> m ()
 addCommand c = scheduler %= execState (S.add c)
+
+addCommandT :: (Monad m, Show e, MonadState CommandScheduler m)
+            => CommandT (ReaderT Level (ErrorT e m)) -> m ()
+addCommandT c = do
+  lvl <- use level
+  c' <- runErrorT
+      $ flip runReaderT lvl
+      $ runCommandT c
+  addCommand $ case c' of
+    Left e    -> return $ throwError $ strMsg (show e)
+    Right c'' -> c''
 
 -- | Applies the upcomming sequence of commands to the level. Lifts
 -- all effects into the base monad of the state transformer.
