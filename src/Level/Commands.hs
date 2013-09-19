@@ -11,9 +11,6 @@ import Control.Applicative
 import Safe (tailSafe)
 import Data.Monoid
 
-import qualified Data.Map as M
-import qualified Data.List as L
-
 import Level
 import Path(pathCoords)
 import Actor
@@ -69,24 +66,19 @@ approach actor dest = do
     Just path -> commandT $ mconcat [ move actor coord | coord <- tailSafe $ path ^. pathCoords ]
     Nothing   -> throwError $ PathNotFound actor dest
   where
-      destCoords = do
-        destIsWalkable <- view $ isWalkable dest
-        if destIsWalkable
-          then return $ [dest]
-          else filterM (view . isWalkable) [ dest |+| from2d (dx, dy) | dx <- [-1,0,1], dy <- [-1,0,1] ]
+    destCoords = do
+      destIsWalkable <- view $ isWalkable dest
+      if destIsWalkable
+        then return $ [dest]
+        else filterM (view . isWalkable) [ dest |+| from2d (dx, dy) | dx <- [-1,0,1], dy <- [-1,0,1] ]
 
 -- | move an actor or static element to an adjacent field
 move :: (TileRepr t) => t -> Coord -> Command
 move (toTile -> t) dest =
   return $ do
-    src <- use $ coordOf t
     walkable' <- use $ isWalkable dest
     if walkable'
-      then do
-        let idT = t ^. tileId
-        idToCoord . ix idT  .= dest
-        coordToId . ix src  %= L.delete idT
-        coordToId . ix dest %= (idT :)
+      then coordOf t .= dest
       else throwError $ PathBlocked t dest
 
 pickup :: (Applicative m, MonadReader Level m, MonadError ApproachError m)
@@ -96,13 +88,13 @@ pickup actor item = do
   mconcat
     [ approach actor itemCoord
     , commandT $ return $ do
-        let idItem  = item ^. staticElementId
-            idActor = actor ^. actorId
-        itemPresent <- use $ idToCoord . contains idItem
+        itemPresent <- use $ idToCoord . contains itemId
         if itemPresent
           then do
-            idToCoord %= M.delete idItem
-            coordToId . ix itemCoord %= L.delete idItem
-            actors    . ix idActor   %= execState (pickItem idItem)
+            actors . ix idActor %= execState (pickItem itemId)
+            deleteFromCoords item
           else throwError $ ItemMissing actor item itemCoord
     ]
+  where
+    itemId  = item ^. staticElementId
+    idActor = actor ^. actorId

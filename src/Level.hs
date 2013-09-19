@@ -21,13 +21,14 @@ module Level ( Level (..)
              , findArea
              , findActor
              , isWalkable
+             , deleteFromCoords
 
              , module Coords
              , module Types
              ) where
 
 
-import Control.Lens ((^.),(%=),(<+=),(.~))
+import Control.Lens ((^.),(%=),(<+=),(%%=),(.~),(.=),ix,Lens',lens)
 import Control.Lens.TH
 import Control.Monad.State
 import Control.Applicative
@@ -35,6 +36,7 @@ import Control.Applicative
 import qualified Control.Lens.Getter as LG
 import qualified Data.Sequence as S
 import qualified Data.Map as M
+import qualified Data.List as L
 
 import Data.Maybe(mapMaybe,fromMaybe)
 
@@ -123,10 +125,19 @@ at lvl coord = mapMaybe lookupTile ids
                     <|> toTile <$> M.lookup ident (lvl ^. staticElements)
 
 -- | gets the coordinate at whitch the given tile is located
-coordOf :: (TileRepr t) => t -> LG.Getter Level Coord
-coordOf tile = LG.to $ \(lvl :: Level) ->
-  fromMaybe (error $ "the identifer '" ++ show (toTile tile) ++ "' has no assigned coordinate")
-  $ M.lookup (toTile tile ^. tileId) (lvl ^. idToCoord)
+coordOf :: TileRepr t => t -> Lens' Level Coord
+coordOf tile = lens getter setter
+  where
+    getter lvl =
+      fromMaybe (error $ "the identifer '" ++ show (toTile tile) ++ "' has no assigned coordinate")
+      $ M.lookup (toTile tile ^. tileId) (lvl ^. idToCoord)
+    setter lvl dst = flip execState lvl $ do
+      idToCoord . ix tid .= dst
+      coordToId . ix src %= L.delete tid
+      coordToId . ix dst %= (tid :)
+      where
+        tid = toTile tile ^. tileId
+        src = getter lvl
 
 isWalkable :: Coord -> LG.Getter Level Bool
 isWalkable c = LG.to (\lvl -> (_walkable lvl) lvl c)
@@ -143,3 +154,11 @@ findArea from to = LG.to (\lvl -> P.findArea (lvl ^-> walkable) from to)
 -- satisfying actors as a list.
 findActor :: (Actor -> Bool) -> LG.Getter Level [Actor]
 findActor f = LG.to (\lvl -> M.elems $ M.filter f $ lvl ^. actors)
+
+deleteFromCoords :: MonadState Level m => TileRepr t => t -> m ()
+deleteFromCoords t = do
+  c <- idToCoord %%= deleteLookup tid
+  maybe (return ()) (\c' -> coordToId . ix c' %= L.delete tid) c
+  where
+    tid = toTile t ^. tileId
+    deleteLookup = M.updateLookupWithKey (const . const Nothing)  
