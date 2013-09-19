@@ -37,7 +37,7 @@ spec = describe "An Execution" $ do
               _   -> error ("unrecognized char " ++ show char)
         contains x = isJust . find ((x ==) . render)
         level  = fromString levelBuilder levelString
-               & walkable .~ (\lvl coord -> not $ contains '#' (lvl `at` coord))
+               & walkable .~ (\lvl coord -> not $ contains '#' (lvl ^. at coord))
         dwarf' = head $ level ^. findActor (\a -> render (toTile a) == '@')
 
         levelShouldBe s = do

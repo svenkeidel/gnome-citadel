@@ -65,7 +65,7 @@ data Level = Level { _actors            :: M.Map Identifier Actor
 makeLenses ''Level
 
 instance Show Level where
-  show = toString
+  show = (^.toString)
 
 -- | smart constructor for an empty level
 emptyLevel :: Level
@@ -110,21 +110,33 @@ fromString builder str = execState (mapM insert coordStr) emptyLevel
 
 -- | turns a level into a string. It pads the regions that contain no
 -- tiles with spaces until the maximum coordinates are reached.
-toString :: Level -> String
-toString lvl = unlines $ (map . map) (render . at lvl) coords
+toString :: LG.Getter Level String
+toString = LG.to getter
   where
-    (mx,my) = lvl ^. bounds
-    coords  = [ [ from2d (x,y) | x <- [0..mx] ] | y <- [0..my] ] :: [[Coord]]
+    getter lvl = unlines $ (map . map) (\c -> render $ lvl ^. at c) coords
+      where
+        (mx,my) = lvl ^. bounds
+        coords  = [ [ from2d (x,y) | x <- [0..mx] ] | y <- [0..my] ] :: [[Coord]]
 
 -- | returns a list of tiles located at the given coordinate inside the level
-at :: Level -> Coord -> [Tile]
-at lvl coord = mapMaybe lookupTile ids
+at :: Coord -> LG.Getter Level [Tile]
+at coord = LG.to getter
   where
-    ids = M.findWithDefault [] coord (lvl ^. coordToId)
-    lookupTile ident =  toTile <$> M.lookup ident (lvl ^. actors)
-                    <|> toTile <$> M.lookup ident (lvl ^. staticElements)
+    getter lvl = mapMaybe lookupTile ids
+      where
+        ids = M.findWithDefault [] coord (lvl ^. coordToId)
+        lookupTile ident =  toTile <$> M.lookup ident (lvl ^. actors)
+                        <|> toTile <$> M.lookup ident (lvl ^. staticElements)
 
--- | gets the coordinate at whitch the given tile is located
+-- | gets and manipulates the coordinate at whitch the given tile is located
+--
+-- @
+-- lvl ^. coordOf dwarf
+-- @
+--
+-- @
+-- lvl & coordOf dwarf .~ coord
+-- @
 coordOf :: TileRepr t => t -> Lens' Level Coord
 coordOf tile = lens getter setter
   where
