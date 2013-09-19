@@ -20,6 +20,7 @@ module Level ( Level (..)
              , findPath
              , findArea
              , findActor
+             , findStaticElement
              , isWalkable
              , deleteFromCoords
 
@@ -162,10 +163,16 @@ findPath from to = LG.to (\lvl -> P.defaultPath (lvl ^-> walkable) from to)
 findArea :: Coord -> [Coord] -> LG.Getter Level (Maybe P.Path)
 findArea from to = LG.to (\lvl -> P.findArea (lvl ^-> walkable) from to)
 
--- | filters actors of a level by a predicate and returns the
--- satisfying actors as a list.
+-- | filters tiles of a level by a predicate and returns the
+-- satisfying tile as a list.
+findTile :: TileRepr t => LG.Getter Level (M.Map Identifier t) -> (t -> Bool) -> LG.Getter Level [t]
+findTile tileGetter f = LG.to (\lvl -> M.elems $ M.filter f $ lvl ^. tileGetter)
+
 findActor :: (Actor -> Bool) -> LG.Getter Level [Actor]
-findActor f = LG.to (\lvl -> M.elems $ M.filter f $ lvl ^. actors)
+findActor = findTile actors
+
+findStaticElement :: (StaticElement -> Bool) -> LG.Getter Level [StaticElement]
+findStaticElement = findTile staticElements
 
 deleteFromCoords :: MonadState Level m => TileRepr t => t -> m ()
 deleteFromCoords t = do

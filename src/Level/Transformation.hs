@@ -40,11 +40,13 @@ move (toTile -> t) dest = do
     then coordOf t .= dest
     else throwError $ PathBlocked t dest
 
+-- | removes the item from the map and places it in the inventory of the actor
 pickup :: Monad m => Actor -> StaticElement -> LevelTrans m
 pickup actor item = do
   actors . ix (actor ^. actorId) %= execState (pickItem $ item ^. staticElementId)
   deleteFromCoords item
 
+-- | removes the mining target and places the actor on that field.
 mine :: Monad m => Actor -> StaticElement -> LevelTrans m
 mine actor block = do
   blockCoord <- use $ coordOf block
