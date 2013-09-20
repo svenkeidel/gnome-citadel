@@ -7,11 +7,14 @@ import Control.Monad.State
 
 import qualified Data.Map as M
 
-import Actor
 import Coords
 import Level
-import StaticElement
 import Tile
+
+import Actor (Actor)
+import StaticElement (StaticElement)
+import qualified Actor as Actor
+import qualified StaticElement as StaticElement
 
 type LevelTrans m = StateT Level (ErrorT LevelError m) ()
 
@@ -43,7 +46,7 @@ move (toTile -> t) dest = do
 -- | removes the item from the map and places it in the inventory of the actor
 pickup :: Monad m => Actor -> StaticElement -> LevelTrans m
 pickup actor item = do
-  actors . ix (actor ^. actorId) %= execState (pickItem $ item ^. staticElementId)
+  actors . ix (actor ^. Actor.id) %= execState (Actor.pickItem item)
   deleteFromCoords item
 
 -- | removes the mining target and places the actor on that field.
@@ -51,7 +54,7 @@ mine :: Monad m => Actor -> StaticElement -> LevelTrans m
 mine actor block = do
   blockCoord <- use $ coordOf block
   deleteFromCoords block
-  staticElements %= M.delete (block ^. staticElementId)
+  staticElements %= M.delete (block ^. StaticElement.id)
   move actor blockCoord
 
 failOnMissingItem :: (Monad m) => Actor -> StaticElement -> Coord -> LevelTrans m

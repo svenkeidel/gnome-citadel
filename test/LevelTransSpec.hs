@@ -13,6 +13,7 @@ import Test.Hspec
 import Level
 import Level.Transformation
 import Tile
+import TestTiles
 import Renderable
 
 main :: IO ()
