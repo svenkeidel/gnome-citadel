@@ -17,7 +17,7 @@ spec = do
       e' = S.add $ unfold "abcdef" (fmap ord . unfoldList)
       list `shouldContain` subList =
         sort list `shouldSatisfy` (sort subList `isInfixOf`)
-  
+
   describe "A Scheduler" $ do
     it "can register executions" $ do
       evalState (e >> S.next) S.empty `shouldBe` [1]
@@ -41,7 +41,7 @@ spec = do
             lift $ s2 `shouldContain` [(2, 2), (8, 2)]
             s3 <- S.next
             lift $ s3 `shouldContain` [(3, 3), (7, 3)]
-      execStateT assertions S.empty >> return ()
+      void $ execStateT assertions S.empty
 
   describe "A Execution" $ do
     it "can be exhausted" $ do

@@ -9,6 +9,6 @@ import Types
 
 data StaticElement = StaticElement { _staticElementId :: Identifier
                                    , _staticElementCharRepr :: Char
-                                   }
+                                   } deriving Show
 
 makeLenses ''StaticElement

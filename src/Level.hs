@@ -1,4 +1,4 @@
-{-# LANGUAGE TemplateHaskell, RankNTypes, FlexibleContexts #-}
+{-# LANGUAGE TemplateHaskell, RankNTypes, FlexibleContexts, ScopedTypeVariables #-}
 module Level ( Level (..)
              , emptyLevel
 
@@ -16,30 +16,31 @@ module Level ( Level (..)
              , fromString
              , at
              , freshId
+             , coordOf
              , findPath
-             , getCoord
+             , findArea
              , findActor
-
-             , (^->)
+             , findStaticElement
+             , isWalkable
+             , deleteFromCoords
 
              , module Coords
              , module Types
              ) where
 
 
-import Control.Lens ((^.),(%=),(<+=),(.~))
+import Control.Lens ((^.),(%=),(<+=),(%%=),(.~),(.=),ix,Lens',lens)
 import Control.Lens.TH
 import Control.Monad.State
 import Control.Applicative
-import Control.Monad.Reader
 
 import qualified Control.Lens.Getter as LG
 import qualified Data.Sequence as S
 import qualified Data.Map as M
+import qualified Data.List as L
 
 import Data.Maybe(mapMaybe,fromMaybe)
 
-import Path
 import Actor
 import StaticElement
 import Types
@@ -48,6 +49,9 @@ import Task
 import Queue
 import Renderable
 import Coords
+import Utils
+
+import qualified Path as P
 
 data Level = Level { _actors            :: M.Map Identifier Actor
                    , _staticElements    :: M.Map Identifier StaticElement
@@ -62,7 +66,7 @@ data Level = Level { _actors            :: M.Map Identifier Actor
 makeLenses ''Level
 
 instance Show Level where
-  show = toString
+  show = (^.toString)
 
 -- | smart constructor for an empty level
 emptyLevel :: Level
@@ -107,50 +111,73 @@ fromString builder str = execState (mapM insert coordStr) emptyLevel
 
 -- | turns a level into a string. It pads the regions that contain no
 -- tiles with spaces until the maximum coordinates are reached.
-toString :: Level -> String
-toString lvl = unlines $ (map . map) (render . at lvl) coords
+toString :: LG.Getter Level String
+toString = LG.to getter
   where
-    (mx,my) = lvl ^. bounds
-    coords  = [ [ from2d (x,y) | x <- [0..mx] ] | y <- [0..my] ] :: [[Coord]]
+    getter lvl = unlines $ (map . map) (\c -> render $ lvl ^. at c) coords
+      where
+        (mx,my) = lvl ^. bounds
+        coords  = [ [ from2d (x,y) | x <- [0..mx] ] | y <- [0..my] ] :: [[Coord]]
 
 -- | returns a list of tiles located at the given coordinate inside the level
-at :: Level -> Coord -> [Tile]
-at lvl coord = mapMaybe lookupTile ids
+at :: Coord -> LG.Getter Level [Tile]
+at coord = LG.to getter
   where
-    ids = M.findWithDefault [] coord (lvl ^. coordToId)
-    lookupTile ident =  toTile <$> M.lookup ident (lvl ^. actors)
-                    <|> toTile <$> M.lookup ident (lvl ^. staticElements)
+    getter lvl = mapMaybe lookupTile ids
+      where
+        ids = M.findWithDefault [] coord (lvl ^. coordToId)
+        lookupTile ident =  toTile <$> M.lookup ident (lvl ^. actors)
+                        <|> toTile <$> M.lookup ident (lvl ^. staticElements)
 
--- | gets the coordinate at whitch the given tile is located
-getCoord :: (TileRepr t, Functor m, MonadReader Level m) => t -> m Coord
-getCoord tile = fromMaybe (error $ "the identifer '" ++ show (toTile tile) ++ "' has no assigned coordinate")
-              . M.lookup idT <$> LG.view idToCoord
-  where
-    idT = toTile tile ^. tileId
-
--- | dereferences a 'method' of a type
--- useful when a field of a record takes the record itself as a first parameter:
+-- | gets and manipulates the coordinate at whitch the given tile is located
 --
 -- @
--- data Level =
---   Level {
---     walkable :: Level -> Coord -> Bool
---     ...
---   }
+-- lvl ^. coordOf dwarf
 -- @
 --
--- >>> lvl ^-> walkable $ (1,3)
-(^->) :: s -> LG.Getting (s -> a) s (s -> a) -> a
-s ^-> a = (s ^. a) s
+-- @
+-- lvl & coordOf dwarf .~ coord
+-- @
+coordOf :: TileRepr t => t -> Lens' Level Coord
+coordOf tile = lens getter setter
+  where
+    getter lvl =
+      fromMaybe (error $ "the identifer '" ++ show (toTile tile) ++ "' has no assigned coordinate")
+      $ M.lookup (toTile tile ^. tileId) (lvl ^. idToCoord)
+    setter lvl dst = flip execState lvl $ do
+      idToCoord . ix tid .= dst
+      coordToId . ix src %= L.delete tid
+      coordToId . ix dst %= (tid :)
+      where
+        tid = toTile tile ^. tileId
+        src = getter lvl
+
+isWalkable :: Coord -> LG.Getter Level Bool
+isWalkable c = LG.to (\lvl -> _walkable lvl lvl c)
 
 -- | searches a path from one coordinate in a level to another. It
 -- uses the walkable heuristik to find a suitable path.
-findPath :: MonadReader Level m => Coord -> Coord -> m (Maybe Path)
-findPath from to = do
-  level <- ask
-  return $ defaultPath (level ^-> walkable) from to
+findPath :: Coord -> Coord -> LG.Getter Level (Maybe P.Path)
+findPath from to = LG.to (\lvl -> P.defaultPath (lvl ^-> walkable) from to)
 
--- | filters actors of a level by a predicate and returns the
--- satisfying actors as a list.
-findActor :: (Functor m, MonadReader Level m) => (Actor -> Bool) -> m [Actor]
-findActor f = (M.elems . M.filter f) <$> LG.view actors
+findArea :: Coord -> [Coord] -> LG.Getter Level (Maybe P.Path)
+findArea from to = LG.to (\lvl -> P.findArea (lvl ^-> walkable) from to)
+
+-- | filters tiles of a level by a predicate and returns the
+-- satisfying tile as a list.
+findTile :: TileRepr t => LG.Getter Level (M.Map Identifier t) -> (t -> Bool) -> LG.Getter Level [t]
+findTile tileGetter f = LG.to (\lvl -> M.elems $ M.filter f $ lvl ^. tileGetter)
+
+findActor :: (Actor -> Bool) -> LG.Getter Level [Actor]
+findActor = findTile actors
+
+findStaticElement :: (StaticElement -> Bool) -> LG.Getter Level [StaticElement]
+findStaticElement = findTile staticElements
+
+deleteFromCoords :: MonadState Level m => TileRepr t => t -> m ()
+deleteFromCoords t = do
+  c <- idToCoord %%= deleteLookup tid
+  maybe (return ()) (\c' -> coordToId . ix c' %= L.delete tid) c
+  where
+    tid = toTile t ^. tileId
+    deleteLookup = M.updateLookupWithKey (const . const Nothing)
