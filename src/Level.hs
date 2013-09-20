@@ -37,7 +37,6 @@ import Control.Applicative
 import Data.Default
 
 import qualified Control.Lens.Getter as LG
-import qualified Data.Sequence as S
 import qualified Data.Map as M
 import qualified Data.List as L
 import qualified TaskManagement as T
@@ -76,19 +75,17 @@ instance Show Level where
 
 -- | smart constructor for an empty level
 emptyLevel :: Level
-emptyLevel =
-  Level
-  { _actors = M.empty
-  , _staticElements = M.empty
-  , _nextFreeId = 0
-  , _activeTaskQueue = S.empty
-  , _inactiveTaskQueue = S.empty
-  , _bounds = (0, 0)
-  , _idToCoord = M.empty
-  , _coordToId = M.empty
-  , _walkable = error "walkable heuristik undefined"
-  , _taskManager = def
-  }
+emptyLevel = Level { _actors = def
+                   , _staticElements = def
+                   , _nextFreeId = def
+                   , _activeTaskQueue = def
+                   , _inactiveTaskQueue = def
+                   , _bounds = def
+                   , _idToCoord = def
+                   , _coordToId = def
+                   , _walkable = error "walkable heuristik undefined"
+                   , _taskManager = def
+                   }
 
 -- | returns a fresh identifier that is used to refernce tiles inside
 -- the level.
