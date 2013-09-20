@@ -6,8 +6,6 @@ module Level ( Level (..)
              , actors
              , staticElements
              , nextFreeId
-             , activeTaskQueue
-             , inactiveTaskQueue
              , bounds
              , idToCoord
              , coordToId
@@ -45,8 +43,6 @@ import Data.Maybe(mapMaybe,fromMaybe)
 
 import Types
 import Tile
-import Task
-import Queue
 import Renderable
 import Coords
 import Utils
@@ -60,8 +56,6 @@ import qualified Path as P
 data Level = Level { _actors            :: M.Map Identifier Actor
                    , _staticElements    :: M.Map Identifier StaticElement
                    , _nextFreeId        :: Identifier
-                   , _activeTaskQueue   :: Queue Task
-                   , _inactiveTaskQueue :: Queue Task
                    , _bounds            :: (Int, Int)
                    , _idToCoord         :: M.Map Identifier Coord
                    , _coordToId         :: M.Map Coord [Identifier]
@@ -78,8 +72,6 @@ emptyLevel :: Level
 emptyLevel = Level { _actors = def
                    , _staticElements = def
                    , _nextFreeId = def
-                   , _activeTaskQueue = def
-                   , _inactiveTaskQueue = def
                    , _bounds = def
                    , _idToCoord = def
                    , _coordToId = def
