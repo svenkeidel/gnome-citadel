@@ -1,9 +1,8 @@
 {-# LANGUAGE ScopedTypeVariables #-}
 module CommandSpec(main, spec) where
 
-import Control.Lens((.~), (&), use)
+import Control.Lens((^.), (.~), (&), use)
 import Control.Monad.State
-import Control.Monad.Reader
 import Control.Monad.Error
 
 import Data.List(find)
@@ -12,11 +11,12 @@ import Data.Maybe(isJust)
 import Test.Hspec
 
 import Level
-import Level.Commands
-import Level.CommandScheduler hiding (level)
-import qualified Level.CommandScheduler as CS
+import Level.Command
+import Level.Scheduler hiding (level)
 import Tile
 import Renderable
+
+import qualified Level.Scheduler as CS
 
 main :: IO ()
 main = hspec spec
@@ -24,85 +24,98 @@ main = hspec spec
 spec :: Spec
 spec = describe "An Execution" $ do
 
-    let levelString = unlines
-          [ "## "
-          , " # "
-          , "@  "
-          ]
-        levelBuilder char =
-          case char of
-              '#' -> Just $ Right wall
-              ' ' -> Just $ Right free
-              '@' -> Just $ Left dwarf
-              _   -> error ("unrecognized char " ++ show char)
-        contains x = isJust . find ((x ==) . render)
-        level  = fromString levelBuilder levelString
-               & walkable .~ (\lvl coord -> not $ contains '#' (lvl `at` coord))
-        dwarf' = head $ flip runReader level $ findActor (\a -> render (toTile a) == '@')
+  let levelString = unlines
+                  [ "## "
+                  , " # "
+                  , "@  "
+                  ]
+      levelBuilder char =
+        case char of
+          '#' -> Just $ Right wall
+          ' ' -> Just $ Right free
+          '@' -> Just $ Left dwarf
+          _   -> error ("unrecognized char " ++ show char)
+      contains x = isJust . find ((x ==) . render)
+      level  = fromString levelBuilder levelString
+             & walkable .~ (\lvl coord -> not $ contains '#' (lvl ^. at coord))
+      dwarf' = head $ level ^. findActor (\a -> render (toTile a) == '@')
 
-        levelShouldBe s = do
-          lvl <- use CS.level
-          lift $ lift $ show lvl `shouldBe` s
+      findWall c = do
+        lvl <- use CS.level
+        return $ head
+               $ lvl ^. findStaticElement (\t -> render (toTile t) == '#'
+                                              && lvl ^. coordOf t  == from2d c)
 
-        gameStepShouldChangeLevelTo s = executeGameStep >> levelShouldBe (unlines s)
+      levelShouldBe s = do
+        lvl <- use CS.level
+        lift $ lift $ show lvl `shouldBe` s
 
-        isRight (Right _) = True
-        isRight _         = False
-        isLeft = not . isRight
+      gameStepShouldChangeLevelTo s = executeGameStep >> levelShouldBe (unlines s)
 
-    describe "A Move" $ do
-      it "moves an actor in one step to an adjacent coordinate" $ do
+      isRight (Right _) = True
+      isRight _         = False
+      --isLeft = not . isRight
 
-        e <- runErrorT $ flip runCommandScheduler level $ do
+  describe "An Approach" $ do
+    it "moves an actor in multiple game steps to a destination coordinate" $ do
 
-             addCommand $ move dwarf' (from2d (1,2))
-             gameStepShouldChangeLevelTo [ "## "
-                                         , " # "
-                                         , " @ "
-                                         ]
+      e <- runErrorT $ flip runCommandScheduler level $ do
+        addCommandT $ approach dwarf' (from2d (2,0))
+        gameStepShouldChangeLevelTo [ "## "
+                                    , " # "
+                                    , " @ "
+                                    ]
 
-             addCommand $ move dwarf' (from2d (0,1))
-             gameStepShouldChangeLevelTo [ "## "
-                                         , "@# "
-                                         , "   "
-                                         ]
+        gameStepShouldChangeLevelTo [ "## "
+                                    , " #@"
+                                    , "   "
+                                    ]
 
-        e `shouldSatisfy` isRight
+        gameStepShouldChangeLevelTo [ "##@"
+                                    , " # "
+                                    , "   "
+                                    ]
 
-      it "cannot be executed if the destination is blocked" $ do
+        gameStepShouldChangeLevelTo [ "##@"
+                                    , " # "
+                                    , "   "
+                                    ]
 
-        e' <- runErrorT $ flip runCommandScheduler level $ do
-          addCommand $ move dwarf' (from2d (1,1))
-          executeGameStep
-        e' `shouldSatisfy` isLeft
+      e `shouldSatisfy` isRight
 
-    describe "An Approach" $
-      it "moves an actor in multiple game steps to a destination coordinate" $ do
+    it "should approach an adjacent field if the destination is blocked" $ do
+      e <- runErrorT $ flip runCommandScheduler level $ do
+        addCommandT $ approach dwarf' (from2d (1,0))
+        gameStepShouldChangeLevelTo [ "## "
+                                    , "@# "
+                                    , "   "
+                                    ]
 
-        e <- runErrorT $ flip runCommandScheduler level $ do
-          lvl <- use CS.level
-          c   <- runErrorT $ flip runReaderT lvl $ approach dwarf' (from2d (2,0))
-          addCommand $ case c of
-            Left e'  -> error $ "Could not find path: " ++ show e'
-            Right c' -> c'
-          gameStepShouldChangeLevelTo [ "## "
-                                      , " # "
-                                      , " @ "
-                                      ]
+        gameStepShouldChangeLevelTo [ "## "
+                                    , "@# "
+                                    , "   "
+                                    ]
 
-          gameStepShouldChangeLevelTo [ "## "
-                                      , " #@"
-                                      , "   "
-                                      ]
+      e `shouldSatisfy` isRight
 
-          gameStepShouldChangeLevelTo [ "##@"
-                                      , " # "
-                                      , "   "
-                                      ]
+  describe "A Mining Command" $ do
+    it "should approach the mining location, to remove the field and place the actor on top" $ do
+      e <- runErrorT $ flip runCommandScheduler level $ do
+        wall' <- findWall (1,0)
+        addCommandT $ mine dwarf' wall'
+        gameStepShouldChangeLevelTo [ "## "
+                                    , "@# "
+                                    , "   "
+                                    ]
 
-          gameStepShouldChangeLevelTo [ "##@"
-                                      , " # "
-                                      , "   "
-                                      ]
+        gameStepShouldChangeLevelTo [ "#@ "
+                                    , " # "
+                                    , "   "
+                                    ]
 
-        e `shouldSatisfy` isRight
+        gameStepShouldChangeLevelTo [ "#@ "
+                                    , " # "
+                                    , "   "
+                                    ]
+
+      e `shouldSatisfy` isRight

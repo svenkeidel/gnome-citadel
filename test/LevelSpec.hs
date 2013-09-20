@@ -27,13 +27,14 @@ spec = describe "A Level" $ do
               '@' -> Just $ Left dwarf
               _   -> error ("unrecognized char " ++ show char)
         level = fromString levelBuilder levelString
+        at' c = head $ level ^. at (from2d c)
 
     it "can be accessed via coordinates" $ do
-      render (head $ level `at` from2d (1,1)) `shouldBe` '#'
-      render (head $ level `at` from2d (0,2)) `shouldBe` '@'
-      render (head $ level `at` from2d (2,0)) `shouldBe` '#'
-      render (head $ level `at` from2d (0,1)) `shouldBe` ' '
-      render (head $ level `at` from2d (1,2)) `shouldBe` ' '
+      render (at' (1,1)) `shouldBe` '#'
+      render (at' (0,2)) `shouldBe` '@'
+      render (at' (2,0)) `shouldBe` '#'
+      render (at' (0,1)) `shouldBe` ' '
+      render (at' (1,2)) `shouldBe` ' '
 
     it "can generate fresh identifiers" $ do
       let ((n1, n2, n3), level') = runState generateFreshIdentifiers level

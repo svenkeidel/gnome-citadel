@@ -33,4 +33,4 @@ free :: StaticElement
 free = StaticElement undefined ' '
 
 dwarf :: Actor
-dwarf = Actor undefined '@'
+dwarf = Actor undefined '@' []
