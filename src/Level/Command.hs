@@ -60,8 +60,8 @@ approach actor dest = do
     destCoords = do
       destIsWalkable <- view $ isWalkable dest
       if destIsWalkable
-        then return $ [dest]
-        else filterM (view . isWalkable) [ dest |+| from2d (dx, dy) | dx <- [-1,0,1], dy <- [-1,0,1] ]
+        then return [dest]
+        else filterM (view . isWalkable) (neighbors2d dest)
 
 
 pickup :: (Applicative m, MonadReader Level m, MonadError ApproachError m)
