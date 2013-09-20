@@ -153,7 +153,7 @@ coordOf tile = lens getter setter
         src = getter lvl
 
 isWalkable :: Coord -> LG.Getter Level Bool
-isWalkable c = LG.to (\lvl -> (_walkable lvl) lvl c)
+isWalkable c = LG.to (\lvl -> _walkable lvl lvl c)
 
 -- | searches a path from one coordinate in a level to another. It
 -- uses the walkable heuristik to find a suitable path.
@@ -180,4 +180,4 @@ deleteFromCoords t = do
   maybe (return ()) (\c' -> coordToId . ix c' %= L.delete tid) c
   where
     tid = toTile t ^. tileId
-    deleteLookup = M.updateLookupWithKey (const . const Nothing)  
+    deleteLookup = M.updateLookupWithKey (const . const Nothing)

@@ -63,7 +63,7 @@ functorProperty fromList' toList' =
       property $ \(l :: [Int]) -> toList' (fmap (*2) (fromList' l)) == [2*x | x <- l]
 
     it "preserves identity" $
-      property $ \(u :: f Int) -> (fmap id u) == u
+      property $ \(u :: f Int) -> fmap id u == u
 
     it "is a homomorphism" $
       property $ \(i :: Int) (j :: Int) (u :: f Int) ->
@@ -90,11 +90,11 @@ applicativeProperty fromList' toList' =
       let f = pure (*i)
           g = pure (+j)
       in (pure (.) <*> f <*> g <*> u) == (f <*> (g <*> u))
-      
+
     it "is an homomorphism" $
       property $ \(i :: Int) (x :: Int) ->
       let f = (*i)
-      in (pure f <*> pure x :: f Int) == (pure (f x))
+      in (pure f <*> pure x :: f Int) == pure (f x)
 
     it "can interchange function and argument" $
       property $ \(i :: Int) (x :: Int) ->
@@ -119,7 +119,7 @@ monadProperty fromList' toList' =
     it "preserves right identity" $
       property $ \(u :: f Int) ->
         (u >>= return) == u
-      
+
     it "preserves associativity" $
       property $ \(i :: Int) (j :: Int) (u :: f Int) ->
         let f = return . (*i)
@@ -135,7 +135,7 @@ monoidProperty fromList' toList' =
       property $ \(l :: [Int]) (k :: [Int]) ->
         let list l' = fromList' l'
         in toList' (list l `mappend` list k) == l `mappend` k
-      
+
     it "preserves right identity" $
       property $ \(u :: f Int) ->
         u `mappend` mempty == u
