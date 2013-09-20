@@ -39,6 +39,3 @@ getTask tId lvl = (,) <$> taskCoordinate <*> foundTask
 
 numberOfTasks :: Level -> Int
 numberOfTasks lvl = T.numberOfTasks $ lvl ^. taskManager
-
-isReachable :: Coord -> Level -> Bool
-isReachable = const $ const False

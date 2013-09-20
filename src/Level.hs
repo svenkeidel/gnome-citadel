@@ -21,6 +21,7 @@ module Level ( Level (..)
              , findActor
              , findStaticElement
              , isWalkable
+             , isReachable
              , deleteFromCoords
 
              , module Coords
@@ -177,3 +178,6 @@ deleteFromCoords t = do
   where
     tid = toTile t ^. Tile.id
     deleteLookup = M.updateLookupWithKey (const . const Nothing)
+
+isReachable :: Coord -> Level -> Bool
+isReachable = const $ const False
