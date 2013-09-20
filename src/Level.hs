@@ -12,6 +12,7 @@ module Level ( Level (..)
              , idToCoord
              , coordToId
              , walkable
+             , taskManager
 
              , fromString
              , at
@@ -33,11 +34,13 @@ import Control.Lens ((^.),(%=),(<+=),(%%=),(.~),(.=),ix,Lens',lens)
 import Control.Lens.TH
 import Control.Monad.State
 import Control.Applicative
+import Data.Default
 
 import qualified Control.Lens.Getter as LG
 import qualified Data.Sequence as S
 import qualified Data.Map as M
 import qualified Data.List as L
+import qualified TaskManagement as T
 
 import Data.Maybe(mapMaybe,fromMaybe)
 
@@ -64,6 +67,7 @@ data Level = Level { _actors            :: M.Map Identifier Actor
                    , _idToCoord         :: M.Map Identifier Coord
                    , _coordToId         :: M.Map Coord [Identifier]
                    , _walkable          :: Level -> Coord -> Bool
+                   , _taskManager       :: T.TaskManager
                    }
 makeLenses ''Level
 
@@ -83,6 +87,7 @@ emptyLevel =
   , _idToCoord = M.empty
   , _coordToId = M.empty
   , _walkable = error "walkable heuristik undefined"
+  , _taskManager = def
   }
 
 -- | returns a fresh identifier that is used to refernce tiles inside
