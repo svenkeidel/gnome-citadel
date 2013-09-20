@@ -1,16 +1,23 @@
 {-# LANGUAGE TemplateHaskell, EmptyDataDecls #-}
-module Tile where
+module Tile ( Tile(..)
+            , Tile.id
+            , charRepr
+            , TileRepr(..)
+            ) where
 
 import Types
-import StaticElement
-import Actor
 import Control.Applicative
 import Control.Lens.Getter
 import Control.Lens.TH
 
+import Actor(Actor)
+import StaticElement(StaticElement)
+import qualified Actor as Actor
+import qualified StaticElement as StaticElement
+
 data Tile = Tile
-          { _tileId :: Identifier
-          , _tileCharRepr :: Char
+          { _id :: Identifier
+          , _charRepr :: Char
           } deriving Show
 makeLenses ''Tile
 
@@ -18,19 +25,10 @@ class TileRepr t where
   toTile :: t -> Tile
 
 instance TileRepr StaticElement where
-  toTile = Tile <$> view staticElementId <*> view staticElementCharRepr
+  toTile = Tile <$> view StaticElement.id <*> view StaticElement.charRepr
 
 instance TileRepr Actor where
-  toTile = Tile <$> view actorId <*> view actorCharRepr
+  toTile = Tile <$> view Actor.id <*> view Actor.charRepr
 
 instance TileRepr Tile where
-  toTile = id
-
-wall :: StaticElement
-wall = StaticElement undefined '#'
-
-free :: StaticElement
-free = StaticElement undefined ' '
-
-dwarf :: Actor
-dwarf = Actor undefined '@' []
+  toTile = Prelude.id

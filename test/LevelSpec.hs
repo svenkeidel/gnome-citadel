@@ -7,7 +7,7 @@ import Test.Hspec
 
 import Level
 import Renderable
-import Tile
+import TestTiles
 
 main :: IO ()
 main = hspec spec

@@ -10,7 +10,7 @@ class Renderable t repr where
   render :: t -> repr
 
 instance Renderable Tile Char where
-  render = view tileCharRepr
+  render = view charRepr
 
 instance Renderable a Char => Renderable [a] Char where
   render []    = ' '

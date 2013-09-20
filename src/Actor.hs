@@ -1,24 +1,27 @@
 {-# LANGUAGE TemplateHaskell, FlexibleContexts #-}
 module Actor ( Actor (..)
-             , actorId
-             , actorCharRepr
+             , id
+             , charRepr
              , pickItem
              , dropItem
              ) where
 
-import Control.Lens((%=))
+import Prelude hiding(id)
+
+import Control.Lens((%=),(^.))
 import Control.Lens.TH
 import Control.Monad.State
 import Types
+import qualified StaticElement as S
 
-data Actor = Actor { _actorId :: Identifier
-                   , _actorCharRepr :: Char
-                   , _actorHoldedItems :: [Identifier]
+data Actor = Actor { _id :: Identifier
+                   , _charRepr :: Char
+                   , _inventory :: [Identifier]
                    } deriving Show
 makeLenses ''Actor
 
-pickItem :: MonadState Actor m => Identifier -> m ()
-pickItem ident = actorHoldedItems %= (ident :)
+pickItem :: MonadState Actor m => S.StaticElement -> m ()
+pickItem item = inventory %= (item ^. S.id :)
 
 dropItem :: MonadState Actor m => Identifier -> m ()
 dropItem = undefined

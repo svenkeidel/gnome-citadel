@@ -15,6 +15,7 @@ import Level.Command
 import Level.Scheduler hiding (level)
 import Tile
 import Renderable
+import TestTiles
 
 import qualified Level.Scheduler as CS
 
