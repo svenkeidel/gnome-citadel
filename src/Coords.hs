@@ -6,6 +6,7 @@ module Coords ( Coord (Coord)
               , from2d
               , to2d
               , distance
+              , neighbors2d
 
               , SumCoord (..)
               , (|+|)
@@ -14,6 +15,7 @@ module Coords ( Coord (Coord)
 import Control.Lens.TH
 import Data.Monoid
 import Data.Function(on)
+import Control.Monad (guard)
 
 data Coord = Coord { _cx :: Int, _cy :: Int, _cz :: Int } deriving (Eq,Ord)
 makeLenses ''Coord
@@ -44,3 +46,13 @@ from2d (x,y) = Coord x y 0
 
 to2d :: Coord -> (Int,Int)
 to2d (Coord x y _) = (x,y)
+
+directions2d :: [Coord]
+directions2d = do
+  x <- [-1, 0, 1]
+  y <- [-1, 0, 1]
+  guard $ (x,y) /= (0,0)
+  return . from2d $ (x,y)
+
+neighbors2d :: Coord -> [Coord]
+neighbors2d c = [c |+| dir | dir <- directions2d]

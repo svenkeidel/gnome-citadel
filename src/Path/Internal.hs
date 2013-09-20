@@ -4,7 +4,6 @@ module Path.Internal ( findPath
                      , visit
                      , analyzeNbs
                      , reconstructPath
-                     , neighbors2d
 
                      , PathFinderState (PathFinderState)
                      , closed
@@ -26,7 +25,6 @@ module Path.Internal ( findPath
                      , pathCoords
                      ) where
 
-import qualified Data.Monoid as DM
 import Control.Lens (view, (%=), use, (.=))
 import Control.Lens.TH
 import Control.DeepSeq (NFData (rnf))
@@ -34,7 +32,7 @@ import Data.Default
 import Data.Maybe (isJust,fromJust)
 import Control.Applicative (Applicative, (<*>),(<$>),pure)
 
-import Control.Monad(guard, when, unless)
+import Control.Monad(when, unless)
 
 import Control.Monad.Trans.Reader (ReaderT, runReaderT)
 import Control.Monad.Trans.State (StateT, runStateT)
@@ -184,15 +182,3 @@ visit c = closed %= Set.insert c
 
 alreadyVisited :: (Functor m, MonadState PathFinderState m) => Coord -> m Bool
 alreadyVisited c = Set.member c <$> use closed
-
-allowedDirections :: [Coord]
-allowedDirections = do
-  x <- [-1, 0, 1]
-  y <- [-1, 0, 1]
-  guard $ (x,y) /= (0,0)
-  return . from2d $ (x,y)
-
-neighbors2d :: Coord -> [Coord]
-neighbors2d c = map (getSumCoord . DM.mappend fromCoordSum) toSumCoords
-  where fromCoordSum = SumCoord c
-        toSumCoords = map SumCoord allowedDirections
