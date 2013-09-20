@@ -1,14 +1,16 @@
 {-# LANGUAGE TemplateHaskell #-}
 module StaticElement ( StaticElement (..)
-                     , staticElementId
-                     , staticElementCharRepr
+                     , id
+                     , charRepr
                      ) where
+
+import Prelude hiding(id)
 
 import Control.Lens.TH
 import Types
 
-data StaticElement = StaticElement { _staticElementId :: Identifier
-                                   , _staticElementCharRepr :: Char
+data StaticElement = StaticElement { _id :: Identifier
+                                   , _charRepr :: Char
                                    } deriving Show
 
 makeLenses ''StaticElement

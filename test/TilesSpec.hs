@@ -2,6 +2,7 @@ module TilesSpec(main, spec) where
 
 import Test.Hspec
 import Tile
+import TestTiles
 import Renderable
 
 main :: IO ()

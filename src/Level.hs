@@ -41,8 +41,6 @@ import qualified Data.List as L
 
 import Data.Maybe(mapMaybe,fromMaybe)
 
-import Actor
-import StaticElement
 import Types
 import Tile
 import Task
@@ -51,6 +49,10 @@ import Renderable
 import Coords
 import Utils
 
+import Actor(Actor)
+import StaticElement(StaticElement)
+import qualified Actor as Actor
+import qualified StaticElement as StaticElement
 import qualified Path as P
 
 data Level = Level { _actors            :: M.Map Identifier Actor
@@ -102,8 +104,8 @@ fromString builder str = execState (mapM insert coordStr) emptyLevel
     insert (coord,char) = do
       nextId <- freshId
       case builder char of
-        Just (Left  a) -> actors         %= M.insert nextId (actorId .~ nextId $ a)
-        Just (Right s) -> staticElements %= M.insert nextId (staticElementId .~ nextId $ s)
+        Just (Left  a) -> actors         %= M.insert nextId (Actor.id .~ nextId $ a)
+        Just (Right s) -> staticElements %= M.insert nextId (StaticElement.id .~ nextId $ s)
         Nothing        -> return ()
       idToCoord %= M.insert nextId coord
       coordToId %= M.insertWith (++) coord [nextId]
@@ -143,13 +145,13 @@ coordOf tile = lens getter setter
   where
     getter lvl =
       fromMaybe (error $ "the identifer '" ++ show (toTile tile) ++ "' has no assigned coordinate")
-      $ M.lookup (toTile tile ^. tileId) (lvl ^. idToCoord)
+      $ M.lookup (toTile tile ^. Tile.id) (lvl ^. idToCoord)
     setter lvl dst = flip execState lvl $ do
       idToCoord . ix tid .= dst
       coordToId . ix src %= L.delete tid
       coordToId . ix dst %= (tid :)
       where
-        tid = toTile tile ^. tileId
+        tid = toTile tile ^. Tile.id
         src = getter lvl
 
 isWalkable :: Coord -> LG.Getter Level Bool
@@ -179,5 +181,5 @@ deleteFromCoords t = do
   c <- idToCoord %%= deleteLookup tid
   maybe (return ()) (\c' -> coordToId . ix c' %= L.delete tid) c
   where
-    tid = toTile t ^. tileId
+    tid = toTile t ^. Tile.id
     deleteLookup = M.updateLookupWithKey (const . const Nothing)
