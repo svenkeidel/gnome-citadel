@@ -30,7 +30,8 @@ library
                        Queue,
                        Coords,
                        Path,
-                       Path.Internal
+                       Path.Internal,
+                       TaskManagement
   Build-depends:       base ==4.*,
                        containers,
                        lens,
