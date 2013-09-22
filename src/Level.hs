@@ -2,7 +2,6 @@
 module Level ( Level (..)
              , emptyLevel
 
-             {- Lenses -}
              , actors
              , staticElements
              , nextFreeId
@@ -27,7 +26,6 @@ module Level ( Level (..)
              , module Coords
              , module Types
              ) where
-
 
 import Control.Lens ((^.),(%=),(<+=),(%%=),(.~),(.=),ix,Lens',lens)
 import Control.Lens.TH
@@ -148,7 +146,6 @@ coordOf tile = lens getter setter
       where
         tid = toTile tile ^. Tile.id
         src = getter lvl
-
 
 isWalkable :: Coord -> LG.Getter Level Bool
 isWalkable c = LG.to (\lvl -> _walkable lvl lvl c)
