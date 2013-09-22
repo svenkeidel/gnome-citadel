@@ -5,6 +5,8 @@ module TaskManagement ( TaskManager
                       , numberOfTasks
                       , hasTask
                       , addTask
+                      , addReachableTask
+                      , addUnreachableTask
                       , getTask
                       ) where
 
@@ -45,11 +47,16 @@ hasTask tId tm = DF.any match (tm ^. activeTaskQueue) ||
   where
     match t = t ^. taskId == tId
 
+addReachableTask :: Task -> TaskManager -> TaskManager
+addReachableTask task = activeTaskQueue %~ enqueue task
+
+addUnreachableTask :: Task -> TaskManager -> TaskManager
+addUnreachableTask task = inactiveTaskQueue %~ enqueue task
+
 addTask :: Bool -> Task -> TaskManager -> TaskManager
-addTask isReachable task = targetQueue %~ enqueue task
-  where targetQueue = if isReachable
-                      then activeTaskQueue
-                      else inactiveTaskQueue
+addTask isReachable task = if isReachable
+                              then addReachableTask task
+                              else addUnreachableTask task
 
 getTask :: Identifier -> TaskManager -> Maybe Task
 getTask tId manager = foundTask
