@@ -24,7 +24,7 @@ import Utils
 
 data TaskManager = TaskManager { _activeTaskQueue :: Queue Task
                                , _inactiveTaskQueue :: Queue Task
-                               }
+                               } deriving (Show,Eq)
 makeLenses ''TaskManager
 
 instance Default TaskManager where
@@ -50,7 +50,6 @@ addTask isReachable task = targetQueue %~ enqueue task
   where targetQueue = if isReachable
                       then activeTaskQueue
                       else inactiveTaskQueue
-
 
 getTask :: Identifier -> TaskManager -> Maybe Task
 getTask tId manager = foundTask

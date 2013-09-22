@@ -10,10 +10,10 @@ import Control.Lens.TH
 import Types
 import Coords
 
-data TaskType = Mine | Lumber
+data TaskType = Mine | Lumber deriving (Show,Eq)
 
 data Task = Task { _taskId :: Identifier
                  , _taskTarget :: Coord
                  , _taskType :: TaskType
-                 }
+                 } deriving (Show,Eq)
 makeLenses ''Task
