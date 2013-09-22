@@ -50,8 +50,8 @@ import Utils
 
 import Actor(Actor)
 import StaticElement(StaticElement)
-import qualified Actor as Actor
-import qualified StaticElement as StaticElement
+import qualified Actor
+import qualified StaticElement
 import qualified Path as P
 
 data Level = Level { _actors            :: M.Map Identifier Actor
@@ -148,6 +148,7 @@ coordOf tile = lens getter setter
       where
         tid = toTile tile ^. Tile.id
         src = getter lvl
+
 
 isWalkable :: Coord -> LG.Getter Level Bool
 isWalkable c = LG.to (\lvl -> _walkable lvl lvl c)
