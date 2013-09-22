@@ -16,11 +16,11 @@ import Data.Default
 
 import qualified Data.Sequence as DS
 import qualified Data.Foldable as DF
-import qualified Data.Monoid as DM
 
 import Queue
 import Task
 import Types
+import Utils
 
 data TaskManager = TaskManager { _activeTaskQueue :: Queue Task
                                , _inactiveTaskQueue :: Queue Task
@@ -68,7 +68,3 @@ matchId tId task = tId == task ^. taskId
 
 findTask :: TaskManager -> LG.Getter TaskManager (Queue Task) -> (Task -> Bool) -> Maybe Task
 findTask manager queue p = DF.find p $ manager ^. queue
-
--- TODO move to utils
-useFirst:: DF.Foldable t => t (Maybe a) -> Maybe a
-useFirst = DM.getFirst . DF.foldMap DM.First
