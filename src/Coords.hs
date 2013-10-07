@@ -9,6 +9,7 @@ module Coords ( Coord (Coord)
               , neighbors2d
 
               , SumCoord (..)
+              , sumCoord
               , (|+|)
               ) where
 
@@ -31,7 +32,9 @@ distance (Coord x1 y1 z1) (Coord x2 y2 z2) = sqrt $ xSum + ySum + zSum
 instance Show Coord where
   show (Coord x y z) = show (x,y,z)
 
-newtype SumCoord = SumCoord { getSumCoord :: Coord }
+newtype SumCoord = SumCoord { getSumCoord :: Coord } deriving Show
+makeIso ''SumCoord
+
 instance Monoid SumCoord where
   mempty = SumCoord $ Coord 0 0 0
   mappend (SumCoord (Coord x1 y1 z1)) (SumCoord (Coord x2 y2 z2)) =
