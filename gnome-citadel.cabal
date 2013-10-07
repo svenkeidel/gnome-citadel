@@ -39,8 +39,7 @@ library
                        PSQueue == 1.1.*,
                        transformers == 0.3.*,
                        data-default == 0.5.*,
-                       deepseq == 1.3.*,
-                       safe == 0.3.*
+                       deepseq == 1.3.*
 
 executable sdl-test
   hs-source-dirs:      test

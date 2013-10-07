@@ -2,11 +2,11 @@
 module Level.Command where
 
 import Control.Lens ((^.),view)
+import Control.Lens.Cons (_tail)
 import Control.Monad.Error
 import Control.Monad.Reader
 import Control.Applicative
 
-import Safe (tailSafe)
 import Data.Monoid
 import Data.Functor.Identity
 
@@ -54,7 +54,7 @@ approach :: (Applicative m, MonadReader Level m, MonadError ApproachError m)
 approach actor dest = do
   maybePath <- view =<< findArea <$> view (coordOf actor) <*> destCoords
   case maybePath of
-    Just path -> commandT $ DT.foldMapDefault (return . T.move actor) (tailSafe $ path ^. pathCoords)
+    Just path -> commandT $ DT.foldMapDefault (return . T.move actor) (path ^. pathCoords . _tail)
     Nothing   -> throwError $ PathNotFound actor dest
   where
     destCoords = do
