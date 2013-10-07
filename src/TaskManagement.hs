@@ -12,6 +12,7 @@ module TaskManagement ( TaskManager
 
 import Control.Lens.TH
 import Control.Lens.Operators
+import Control.Lens (each,findOf)
 import qualified Control.Lens.Getter as LG
 
 import Data.Default
@@ -73,4 +74,4 @@ matchId :: Identifier -> Task -> Bool
 matchId tId task = tId == task ^. taskId
 
 findTask :: TaskManager -> LG.Getter TaskManager (Queue Task) -> (Task -> Bool) -> Maybe Task
-findTask manager queue p = DF.find p $ manager ^. queue
+findTask manager queue p = findOf (queue . each) p manager
