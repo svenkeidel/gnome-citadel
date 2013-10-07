@@ -38,7 +38,7 @@ import qualified Data.Map as M
 import qualified Data.List as L
 import qualified TaskManagement as T
 
-import Data.Maybe(mapMaybe,fromMaybe)
+import Data.Maybe(mapMaybe,fromMaybe,isJust)
 
 import Types
 import Tile
@@ -178,4 +178,8 @@ deleteFromCoords t = do
     deleteLookup = M.updateLookupWithKey (const . const Nothing)
 
 isReachable :: Coord -> Level -> Bool
-isReachable = const $ const False
+isReachable target level = any canReach (level ^. actors . LG.to M.elems)
+  where canReach :: Actor -> Bool
+        canReach actor = isJust $ do
+          actorCoord <- M.lookup (actor ^. Actor.id) (level ^. idToCoord)
+          P.defaultPath (level ^-> walkable) actorCoord target
