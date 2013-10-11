@@ -4,7 +4,6 @@ module Level ( Level (..)
 
              , actors
              , staticElements
-             , nextFreeId
              , bounds
              , idToCoord
              , coordToId
@@ -12,7 +11,6 @@ module Level ( Level (..)
 
              , fromString
              , at
-             , freshId
              , coordOf
              , findPath
              , findArea
@@ -28,7 +26,7 @@ module Level ( Level (..)
              , module Types
              ) where
 
-import Control.Lens ((^.),(%=),(<+=),(%%=),(.~),(.=),ix,Lens',lens)
+import Control.Lens ((^.),(%=),(%%=),(.~),(.=),ix,Lens',lens,zoom)
 import Control.Lens.TH
 import Control.Monad.State
 import Control.Applicative
@@ -40,6 +38,7 @@ import qualified Data.List as L
 
 import Data.Maybe(mapMaybe,fromMaybe,isJust)
 
+import Counter
 import Types
 import Tile
 import Renderable
@@ -54,7 +53,7 @@ import qualified Path as P
 
 data Level = Level { _actors            :: M.Map Identifier Actor
                    , _staticElements    :: M.Map Identifier StaticElement
-                   , _nextFreeId        :: Identifier
+                   , _nextFreeId        :: Counter
                    , _bounds            :: (Int, Int)
                    , _idToCoord         :: M.Map Identifier Coord
                    , _coordToId         :: M.Map Coord [Identifier]
@@ -76,11 +75,6 @@ emptyLevel = Level { _actors = def
                    , _walkable = error "walkable heuristik undefined"
                    }
 
--- | returns a fresh identifier that is used to refernce tiles inside
--- the level.
-freshId :: MonadState Level m => m Int
-freshId = nextFreeId <+= 1
-
 type TileBuilder = Char -> Maybe (Either Actor StaticElement)
 
 -- | turns the given string into a level. It uses a builder function
@@ -93,7 +87,7 @@ fromString builder str = execState (mapM insert coordStr) emptyLevel
     coords              = [ [ from2d (x,y) | x <- [0..] ] | y <- [0..] ] :: [[Coord]]
     maxT (Coord x1 y1 _) (x2,y2) = (max x1 x2, max y1 y2)
     insert (coord,char) = do
-      nextId <- freshId
+      nextId <- zoom nextFreeId freshId
       case builder char of
         Just (Left  a) -> actors         %= M.insert nextId (Actor.id .~ nextId $ a)
         Just (Right s) -> staticElements %= M.insert nextId (StaticElement.id .~ nextId $ s)

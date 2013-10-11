@@ -22,6 +22,7 @@ library
                        Level.Command,
                        Level.Scheduler,
                        Actor,
+                       Counter,
                        Renderable,
                        StaticElement,
                        Scheduler,

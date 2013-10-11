@@ -11,26 +11,30 @@ module TaskManagement ( TaskManager
                       , getTask
                       ) where
 
+import Control.Lens (each,findOf,zoom)
 import Control.Lens.TH
 import Control.Lens.Operators
-import Control.Lens (each,findOf)
 import qualified Control.Lens.Getter as LG
 
+import Control.Applicative
 import Control.Monad.State
 
+import Data.Default
 import qualified Data.Sequence as DS
 import qualified Data.Foldable as DF
 
+import Counter
 import Queue
 import Task
 import Types
 import Utils
 import Level.Scheduler
-import Level hiding (isReachable)
+import Level hiding (isReachable, _nextFreeId)
 
 data TaskManager = TaskManager { _activeTaskQueue :: Queue Task
                                , _inactiveTaskQueue :: Queue Task
                                , _reachable :: Level -> Task -> Bool
+                               , _nextFreeId :: Counter
                                , _cmdScheduler :: CommandScheduler
                                }
 makeLenses ''TaskManager
@@ -39,6 +43,7 @@ taskManager :: Level -> TaskManager
 taskManager lvl = TaskManager { _activeTaskQueue   = DS.empty
                               , _inactiveTaskQueue = DS.empty
                               , _reachable         = error "TaskManager.isReachable is undefined"
+                              , _nextFreeId        = def
                               , _cmdScheduler      = commandScheduler lvl
                               }
 
@@ -71,8 +76,9 @@ isReachable task = LG.to $ \tm ->
   let lvl = tm ^. cmdScheduler . level
   in _reachable tm lvl task
 
-addTask :: (Monad m, MonadState TaskManager m) => Task -> m ()
-addTask task = do
+addTask :: (Functor m, Monad m) => (Identifier -> Task) -> StateT TaskManager m ()
+addTask t = do
+  task <- t <$> zoom nextFreeId freshId
   isReachable' <- LG.use $ isReachable task
   if isReachable'
     then addReachableTask task

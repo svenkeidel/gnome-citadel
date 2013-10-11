@@ -20,7 +20,7 @@ spec = describe "The TaskManager" $ do
   let lvl = emptyLevel
       tskMgr = taskManager lvl
       tId = 1
-      task = Task tId (from2d (0,0)) Mine
+      task = mine (from2d (1,0))
 
   context "when adding tasks" $ do
     it "hasTask returns true only for the added task" $ do
