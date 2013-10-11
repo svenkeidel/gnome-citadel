@@ -9,7 +9,6 @@ module Level ( Level (..)
              , idToCoord
              , coordToId
              , walkable
-             , taskManager
 
              , fromString
              , at
@@ -22,6 +21,8 @@ module Level ( Level (..)
              , isWalkable
              , isReachable
              , deleteFromCoords
+
+             , TileBuilder
 
              , module Coords
              , module Types
@@ -36,7 +37,6 @@ import Data.Default
 import qualified Control.Lens.Getter as LG
 import qualified Data.Map as M
 import qualified Data.List as L
-import qualified TaskManagement as T
 
 import Data.Maybe(mapMaybe,fromMaybe,isJust)
 
@@ -59,7 +59,6 @@ data Level = Level { _actors            :: M.Map Identifier Actor
                    , _idToCoord         :: M.Map Identifier Coord
                    , _coordToId         :: M.Map Coord [Identifier]
                    , _walkable          :: Level -> Coord -> Bool
-                   , _taskManager       :: T.TaskManager
                    }
 makeLenses ''Level
 
@@ -75,7 +74,6 @@ emptyLevel = Level { _actors = def
                    , _idToCoord = def
                    , _coordToId = def
                    , _walkable = error "walkable heuristik undefined"
-                   , _taskManager = def
                    }
 
 -- | returns a fresh identifier that is used to refernce tiles inside
@@ -177,9 +175,10 @@ deleteFromCoords t = do
     tid = toTile t ^. Tile.id
     deleteLookup = M.updateLookupWithKey (const . const Nothing)
 
-isReachable :: Coord -> Level -> Bool
-isReachable target level = any canReach (level ^. actors . LG.to M.elems)
-  where canReach :: Actor -> Bool
-        canReach actor = isJust $ do
-          actorCoord <- M.lookup (actor ^. Actor.id) (level ^. idToCoord)
-          P.defaultPath (level ^-> walkable) actorCoord target
+isReachable :: Coord -> LG.Getter Level Bool
+isReachable target = LG.to $ \lvl ->
+  any (canReach lvl) (lvl ^. actors . LG.to M.elems)
+  where canReach :: Level -> Actor -> Bool
+        canReach lvl actor = isJust $ do
+          actorCoord <- M.lookup (actor ^. Actor.id) (lvl ^. idToCoord)
+          P.defaultPath (lvl ^-> walkable) actorCoord target

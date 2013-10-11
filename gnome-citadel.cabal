@@ -21,7 +21,6 @@ library
                        Level.Transformation,
                        Level.Command,
                        Level.Scheduler,
-                       Level.Task,
                        Actor,
                        Renderable,
                        StaticElement,

@@ -1,6 +1,7 @@
 {-# LANGUAGE TemplateHaskell, RankNTypes, FlexibleContexts, ScopedTypeVariables #-}
 module Level.Scheduler ( CommandScheduler
                        , level
+                       , commandScheduler
                        , runCommandScheduler
                        , addCommand
                        , addCommandT
@@ -29,10 +30,13 @@ data CommandScheduler =
   }
 makeLenses ''CommandScheduler
 
+commandScheduler :: Level -> CommandScheduler
+commandScheduler = CommandScheduler S.empty
+
 -- | Performs a sequence of transformations based on commands on a level.
 runCommandScheduler :: (Monad m) => StateT CommandScheduler m a -> Level -> m Level
 runCommandScheduler s lvl = do
-  cmdSched <- execStateT s (CommandScheduler S.empty lvl)
+  cmdSched <- execStateT s $ commandScheduler lvl
   return $ cmdSched ^. level
 
 -- | Adds a command to a schedule. The command is not executed immediately.

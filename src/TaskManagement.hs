@@ -1,12 +1,13 @@
 {-# LANGUAGE TemplateHaskell, FlexibleContexts, RankNTypes #-}
 module TaskManagement ( TaskManager
+                      , taskManager
+                      , runTaskManager
                       , activeTaskQueue
                       , inactiveTaskQueue
+                      , reachable
                       , numberOfTasks
                       , hasTask
                       , addTask
-                      , addReachableTask
-                      , addUnreachableTask
                       , getTask
                       ) where
 
@@ -15,7 +16,7 @@ import Control.Lens.Operators
 import Control.Lens (each,findOf)
 import qualified Control.Lens.Getter as LG
 
-import Data.Default
+import Control.Monad.State
 
 import qualified Data.Sequence as DS
 import qualified Data.Foldable as DF
@@ -24,51 +25,74 @@ import Queue
 import Task
 import Types
 import Utils
+import Level.Scheduler
+import Level hiding (isReachable)
 
 data TaskManager = TaskManager { _activeTaskQueue :: Queue Task
                                , _inactiveTaskQueue :: Queue Task
-                               } deriving (Show,Eq)
+                               , _reachable :: Level -> Task -> Bool
+                               , _cmdScheduler :: CommandScheduler
+                               }
 makeLenses ''TaskManager
 
-instance Default TaskManager where
-  def = TaskManager DS.empty DS.empty
+taskManager :: Level -> TaskManager
+taskManager lvl = TaskManager { _activeTaskQueue   = DS.empty
+                              , _inactiveTaskQueue = DS.empty
+                              , _reachable         = error "TaskManager.isReachable is undefined"
+                              , _cmdScheduler      = commandScheduler lvl
+                              }
 
-numberOfTasks :: TaskManager -> Int
-numberOfTasks tm = numberOfActiveTasks tm + numberOfInactiveTasks tm
+runTaskManager :: (Monad m) => StateT TaskManager m a -> Level -> m Level
+runTaskManager s lvl = do
+  tskMgr <- execStateT s $ taskManager lvl
+  return $ tskMgr ^. cmdScheduler . level
 
-numberOfActiveTasks :: TaskManager -> Int
-numberOfActiveTasks tm = DS.length $ tm ^. activeTaskQueue
+numberOfTasks :: LG.Getter TaskManager Int
+numberOfTasks = LG.to $ \tm ->
+  tm ^. numberOfActiveTasks + tm ^. numberOfInactiveTasks
 
-numberOfInactiveTasks :: TaskManager -> Int
-numberOfInactiveTasks tm = DS.length $ tm ^. inactiveTaskQueue
+numberOfActiveTasks :: LG.Getter TaskManager Int
+numberOfActiveTasks = LG.to $ \tm ->
+  DS.length $ tm ^. activeTaskQueue
 
-hasTask :: Identifier -> TaskManager -> Bool
-hasTask tId tm = DF.any match (tm ^. activeTaskQueue) ||
-                 DF.any match (tm ^. inactiveTaskQueue)
+numberOfInactiveTasks :: LG.Getter TaskManager Int
+numberOfInactiveTasks = LG.to $ \tm ->
+  DS.length $ tm ^. inactiveTaskQueue
+
+hasTask :: Identifier -> LG.Getter TaskManager Bool
+hasTask tId = LG.to $ \tm ->
+  DF.any match (tm ^. activeTaskQueue) ||
+  DF.any match (tm ^. inactiveTaskQueue)
   where
     match t = t ^. taskId == tId
 
-addReachableTask :: Task -> TaskManager -> TaskManager
-addReachableTask task = activeTaskQueue %~ enqueue task
+isReachable :: Task -> LG.Getter TaskManager Bool
+isReachable task = LG.to $ \tm ->
+  let lvl = tm ^. cmdScheduler . level
+  in _reachable tm lvl task
 
-addUnreachableTask :: Task -> TaskManager -> TaskManager
-addUnreachableTask task = inactiveTaskQueue %~ enqueue task
-
-addTask :: Bool -> Task -> TaskManager -> TaskManager
-addTask isReachable task = if isReachable
-                              then addReachableTask task
-                              else addUnreachableTask task
-
-getTask :: Identifier -> TaskManager -> Maybe Task
-getTask tId manager = foundTask
+addTask :: (Monad m, MonadState TaskManager m) => Task -> m ()
+addTask task = do
+  isReachable' <- LG.use $ isReachable task
+  if isReachable'
+    then addReachableTask task
+    else addUnreachableTask task
   where
-    foundTask :: Maybe Task
-    foundTask = useFirst [ findTaskInQueue activeTaskQueue
-                         , findTaskInQueue inactiveTaskQueue
-                         ]
+    -- reachable and unreachable is an implementation detail. The user
+    -- of this function should not interface with that
+    addReachableTask   task' = activeTaskQueue   %= enqueue task'
+    addUnreachableTask task' = inactiveTaskQueue %= enqueue task'
 
-    findTaskInQueue :: LG.Getter TaskManager (Queue Task) -> Maybe Task
-    findTaskInQueue queue = findTask manager queue (matchId tId)
+getTask :: Identifier -> LG.Getter TaskManager (Maybe Task)
+getTask tId = LG.to foundTask
+  where
+    foundTask :: TaskManager -> Maybe Task
+    foundTask tm = useFirst [ tm ^. findTaskInQueue activeTaskQueue
+                            , tm ^. findTaskInQueue inactiveTaskQueue
+                            ]
+
+    findTaskInQueue :: LG.Getter TaskManager (Queue Task) -> LG.Getter TaskManager (Maybe Task)
+    findTaskInQueue queue = LG.to $ \tm -> findTask tm queue (matchId tId)
 
 matchId :: Identifier -> Task -> Bool
 matchId tId task = tId == task ^. taskId
