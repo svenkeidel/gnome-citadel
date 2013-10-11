@@ -30,6 +30,9 @@ data CommandScheduler =
   }
 makeLenses ''CommandScheduler
 
+instance Show CommandScheduler where
+  show _ = "TODO: implement show instance"
+
 commandScheduler :: Level -> CommandScheduler
 commandScheduler = CommandScheduler S.empty
 

@@ -4,6 +4,7 @@ module Task ( Task (..)
             , taskTarget
             , taskType
             , TaskType (..)
+            , mine
             ) where
 
 import Control.Lens.TH
@@ -17,3 +18,7 @@ data Task = Task { _taskId :: Identifier
                  , _taskType :: TaskType
                  } deriving (Show,Eq)
 makeLenses ''Task
+
+mine :: Coord -> Identifier -> Task
+mine c i = Task i c Mine
+

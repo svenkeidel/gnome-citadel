@@ -2,6 +2,7 @@
 module TaskManagement ( TaskManager
                       , taskManager
                       , runTaskManager
+                      , level
                       , activeTaskQueue
                       , inactiveTaskQueue
                       , reachable
@@ -9,15 +10,20 @@ module TaskManagement ( TaskManager
                       , hasTask
                       , addTask
                       , getTask
+                      , executeGameStep
+                      , assignTasks
                       ) where
 
-import Control.Lens (each,findOf,zoom)
+import Control.Lens (each,findOf,zoom,Lens')
 import Control.Lens.TH
 import Control.Lens.Operators
 import qualified Control.Lens.Getter as LG
 
 import Control.Applicative
 import Control.Monad.State
+import Control.Monad.Error
+
+
 
 import Data.Default
 import qualified Data.Sequence as DS
@@ -28,7 +34,9 @@ import Queue
 import Task
 import Types
 import Utils
-import Level.Scheduler
+import Level.Scheduler hiding (executeGameStep,level)
+import qualified Level.Scheduler as CS
+import Level.Transformation (LevelError)
 import Level hiding (isReachable, _nextFreeId)
 
 data TaskManager = TaskManager { _activeTaskQueue :: Queue Task
@@ -38,6 +46,13 @@ data TaskManager = TaskManager { _activeTaskQueue :: Queue Task
                                , _cmdScheduler :: CommandScheduler
                                }
 makeLenses ''TaskManager
+
+instance Show TaskManager where
+  show tm = "TaskManager { "
+         ++ "activeTasks = " ++ show (tm ^. numberOfActiveTasks) ++ ", "
+         ++ "inactiveTasks = " ++ show (tm ^. numberOfInactiveTasks) ++ ", "
+         ++ "commandScheduler = " ++ show (tm ^. cmdScheduler)
+         ++ " }"
 
 taskManager :: Level -> TaskManager
 taskManager lvl = TaskManager { _activeTaskQueue   = DS.empty
@@ -50,7 +65,10 @@ taskManager lvl = TaskManager { _activeTaskQueue   = DS.empty
 runTaskManager :: (Monad m) => StateT TaskManager m a -> Level -> m Level
 runTaskManager s lvl = do
   tskMgr <- execStateT s $ taskManager lvl
-  return $ tskMgr ^. cmdScheduler . level
+  return $ tskMgr ^. level
+
+level :: Lens' TaskManager Level
+level = cmdScheduler . CS.level
 
 numberOfTasks :: LG.Getter TaskManager Int
 numberOfTasks = LG.to $ \tm ->
@@ -73,7 +91,7 @@ hasTask tId = LG.to $ \tm ->
 
 isReachable :: Task -> LG.Getter TaskManager Bool
 isReachable task = LG.to $ \tm ->
-  let lvl = tm ^. cmdScheduler . level
+  let lvl = tm ^. level
   in _reachable tm lvl task
 
 addTask :: (Functor m, Monad m) => (Identifier -> Task) -> StateT TaskManager m ()
@@ -105,3 +123,9 @@ matchId tId task = tId == task ^. taskId
 
 findTask :: TaskManager -> LG.Getter TaskManager (Queue Task) -> (Task -> Bool) -> Maybe Task
 findTask manager queue p = findOf (queue . each) p manager
+
+executeGameStep :: (Functor m, Monad m) => StateT TaskManager (ErrorT LevelError m) ()
+executeGameStep = zoom cmdScheduler CS.executeGameStep
+
+assignTasks :: StateT TaskManager m ()
+assignTasks = undefined

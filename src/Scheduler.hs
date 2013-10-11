@@ -19,6 +19,9 @@ newtype Scheduler u a =
   }
 makeLenses ''Scheduler
 
+instance Show (u a) => Show (Scheduler u a) where
+  show = show . _unfolds
+
 -- | creates an empty scheduler
 empty :: Scheduler u a
 empty = Scheduler []
