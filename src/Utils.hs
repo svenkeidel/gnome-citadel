@@ -1,6 +1,7 @@
 module Utils ( runInState
              , (^->)
              , useFirst
+             , fromRight
              ) where
 
 import Control.Lens((^.))
@@ -31,3 +32,7 @@ s ^-> a = (s ^. a) s
 
 useFirst:: DF.Foldable t => t (Maybe a) -> Maybe a
 useFirst = DM.getFirst . DF.foldMap DM.First
+
+fromRight :: Either a b -> b
+fromRight (Right x) = x
+fromRight _ = error "Can not extract right value of Left"

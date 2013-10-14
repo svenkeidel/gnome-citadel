@@ -1,12 +1,12 @@
 {-# LANGUAGE ScopedTypeVariables #-}
 module LevelTransSpec(main, spec) where
 
-import Control.Lens((^.), use)
 import Control.Monad.State
 import Control.Monad.Error
 
 import Test.Hspec
 
+import Utils (fromRight)
 import Level
 import Level.Transformation
 import TestHelper
@@ -21,67 +21,68 @@ spec = describe "A Level Transformation" $ do
                       , " # "
                       , "@  "
                       ]
-      dwarf' = level ^. findDwarf
-
-      levelShouldBe s = do
-        lvl <- get
-        lift $ lift $ show lvl `shouldBe` unlines s
+      dwarf' = findDwarf level
 
   describe "A Move" $ do
 
     it "moves an actor in one step to an adjacent coordinate" $ do
-      e <- runErrorT $ flip execStateT level $ do
-        move dwarf' (from2d (1,2))
-        levelShouldBe [ "## "
-                      , " # "
-                      , " @ "
-                      ]
-        move dwarf' (from2d (0,1))
-        levelShouldBe [ "## "
-                      , "@# "
-                      , "   "
-                      ]
-
-      e `shouldSatisfy` isRight
+      let mover = fromRight . move dwarf' (from2d (1,2))
+      show (mover level) `shouldBe` unlines [ "## "
+                                            , " # "
+                                            , " @ "
+                                            ]
+      let mover' = fromRight . move dwarf' (from2d (0,1))
+      show (mover' level) `shouldBe` unlines [ "## "
+                                             , "@# "
+                                             , "   "
+                                             ]
 
     it "cannot be executed if the destination is blocked" $ do
-      e <- runErrorT $ flip runStateT level $ move dwarf' (from2d (1,1))
-      e `shouldSatisfy` isLeft
-
+      let result = move dwarf' (from2d (1,1)) level
+      result `shouldSatisfy` isLeft
 
   describe "Mining" $ do
-
     it "removes the mining target and places the actor on the empty field" $ do
-      e <- runErrorT $ flip execStateT level $ do
-        mine dwarf' =<< use (findWall (1,1)) :: LevelTrans IO
+      let wall = findWall (1,1) level
+          wall' = findWall (0,0) level
+          mine' w = ErrorT . return . mine dwarf' w
+      e <- runErrorT $
+        -- ErrorT :: m (Either a b) -> ErrorT a m b
+        mine' wall
+        >=>
         levelShouldBe [ "## "
-                      , " @ "
-                      , "   "
-                      ]
-
-        mine dwarf' =<< use (findWall (0,0)) :: LevelTrans IO
+                       , " @ "
+                       , "   "
+                       ]
+        >=>
+        mine' wall'
+        >=>
         levelShouldBe [ "@# "
-                      , "   "
-                      , "   "
-                      ]
+                       , "   "
+                       , "   "
+                       ]
+         $ level
 
       e `shouldSatisfy` isRight
 
   describe "Fail on item missing" $ do
-    it "fails if the item is not on the specified location" $ do
-      e <- runErrorT $ flip execStateT level $ do
-        wall' <- use $ findWall (1,1)
-        failOnMissingItem dwarf' wall' (from2d (2,2))
+    let wall = findWall (1,1) level
 
+    it "fails if the item is not on the specified location" $ do
+      let e = failOnMissingItem dwarf' wall (from2d (2,2)) level
       e `shouldSatisfy` isLeft
 
     it "works with alternative" $ do
-      e <- runErrorT $ flip execStateT level $ do
-        wall' <- use $ findWall (1,1)
-        failOnMissingItem dwarf' wall' (from2d (1,1)) >> move dwarf' (from2d (1,2))
+      let move' = ErrorT . return . move dwarf' (from2d (1,2))
+      e <- runErrorT $
+        ErrorT . return . failOnMissingItem dwarf' wall (from2d (1,1))
+        >=>
+        move'
+        >=>
         levelShouldBe [ "## "
-                      , " # "
-                      , " @ "
-                      ]
+                       , " # "
+                       , " @ "
+                       ]
+         $ level
 
       e `shouldSatisfy` isRight

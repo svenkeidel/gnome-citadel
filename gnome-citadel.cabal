@@ -31,7 +31,8 @@ library
                        Coords,
                        Path,
                        Path.Internal,
-                       TaskManagement
+                       TaskManagement,
+                       Utils
   Build-depends:       base ==4.*,
                        containers,
                        lens,

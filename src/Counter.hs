@@ -11,10 +11,10 @@ import Data.Default
 
 import Types
 
-newtype Counter = Counter { _counter :: Identifier }
+newtype Counter = Counter { _counter :: Int }
 makeLenses ''Counter
 
-freshId :: MonadState Counter m => m Identifier
+freshId :: MonadState Counter m => m (Identifier a)
 freshId = counter <+= 1
 
 instance Default Counter where

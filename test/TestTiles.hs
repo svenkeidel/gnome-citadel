@@ -1,5 +1,8 @@
 module TestTiles where
 
+import qualified Data.Set as Set
+
+import Types
 import Actor
 import StaticElement
 
@@ -10,4 +13,4 @@ free :: StaticElement
 free = StaticElement undefined ' '
 
 dwarf :: Actor
-dwarf = Actor undefined '@' []
+dwarf = Actor undefined '@' [] (Set.fromList [Mine])

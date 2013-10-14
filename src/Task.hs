@@ -1,24 +1,38 @@
 {-# LANGUAGE TemplateHaskell #-}
 module Task ( Task (..)
-            , taskId
-            , taskTarget
+            , id
+            , target
             , taskType
-            , TaskType (..)
-            , mine
+            , command
             ) where
 
+import Prelude hiding (id)
+import Control.Lens((^.))
 import Control.Lens.TH
+
+import Data.Ord(comparing)
+
 import Types
 import Coords
+import Level.Command(Command)
+import Actor(Actor)
 
-data TaskType = Mine | Lumber deriving (Show,Eq)
-
-data Task = Task { _taskId :: Identifier
-                 , _taskTarget :: Coord
+data Task = Task { _id :: Identifier Task
+                 , _target :: Coord
                  , _taskType :: TaskType
-                 } deriving (Show,Eq)
+                 , _command :: Actor -> Command
+                 }
 makeLenses ''Task
 
-mine :: Coord -> Identifier -> Task
-mine c i = Task i c Mine
+instance Show Task where
+  show task = "Task "
+           ++ "{ _id = " ++ (show $ task ^. id)
+           ++ ", _target = " ++ (show $ task ^. target)
+           ++ ", _type = " ++ (show $ task ^. taskType)
+           ++ " }"
 
+instance Eq Task where
+  t1 == t2 = t1 ^. id == t2 ^. id
+
+instance Ord Task where
+  compare = comparing (^. id)

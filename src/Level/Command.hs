@@ -1,14 +1,12 @@
 {-# LANGUAGE FlexibleContexts #-}
 module Level.Command where
 
-import Control.Lens ((^.),view)
+import Control.Lens ((^.))
 import Control.Lens.Cons (_tail)
 import Control.Monad.Error
-import Control.Monad.Reader
 import Control.Applicative
 
 import Data.Monoid
-import Data.Functor.Identity
 
 import qualified Data.Traversable as DT
 
@@ -22,13 +20,13 @@ import Unfold
 
 import qualified Level.Transformation as T
 
-type Command = Unfold (LevelTrans Identity)
+type Command = Unfold LevelTrans
 
-command :: Monad m => LevelTrans Identity -> CommandT m
+command :: Monad m => LevelTrans -> CommandT m
 command = commandT . return
 
 -- | A level transformation that is used by the command scheduler
-type CommandT m = UnfoldT m (LevelTrans Identity)
+type CommandT m = UnfoldT m LevelTrans
 
 commandT :: Monad m => Command -> CommandT m
 commandT = UnfoldT . return
@@ -36,50 +34,36 @@ commandT = UnfoldT . return
 runCommandT :: CommandT m -> m Command
 runCommandT = runUnfoldT
 
-data ApproachError
-  = PathNotFound Actor Coord
-  | ApproachError String
-
-instance Error ApproachError where
-  strMsg = ApproachError
-
-instance Show ApproachError where
-  show (PathNotFound a c) = show $ LevelError $
-    "No path could be found for the actor " ++ show a ++ " to the location " ++ show c
-  show (ApproachError s)  = s
-
 -- | find a way to the destination and move the actor to it
-approach :: (Applicative m, MonadReader Level m, MonadError ApproachError m)
-         => Actor -> Coord -> CommandT m
-approach actor dest = do
-  maybePath <- view =<< findArea <$> view (coordOf actor) <*> destCoords
+approach :: (Applicative m, MonadError LevelError m)
+         => Actor -> Coord -> Level -> CommandT m
+approach actor dest lvl = do
   case maybePath of
     Just path -> commandT $ DT.foldMapDefault (return . T.move actor) (path ^. pathCoords . _tail)
-    Nothing   -> throwError $ PathNotFound actor dest
+    Nothing   -> throwError $ PathNotFound fromCoord dest
   where
-    destCoords = do
-      destIsWalkable <- view $ isWalkable dest
-      if destIsWalkable
-        then return [dest]
-        else filterM (view . isWalkable) (neighbors2d dest)
+    fromCoord  = lvl ^. coordOf actor
+    maybePath  = findArea fromCoord destCoords lvl
+    destCoords = if isWalkable dest lvl
+                 then [dest]
+                 else filter (flip isWalkable lvl) (neighbors2d dest)
 
-
-pickup :: (Applicative m, MonadReader Level m, MonadError ApproachError m)
-       => Actor -> StaticElement -> CommandT m
-pickup actor item = do
-  itemCoord <- view $ coordOf item
+pickup :: (Applicative m, MonadError LevelError m)
+       => Actor -> StaticElement -> Level -> CommandT m
+pickup actor item lvl = do
   mconcat
-    [ approach actor itemCoord
+    [ approach actor itemCoord lvl
     , command $ failOnMissingItem actor item itemCoord
              >> T.pickup actor item
     ]
+  where itemCoord = lvl ^. coordOf item
 
-mine :: (Applicative m, MonadReader Level m, MonadError ApproachError m)
-     => Actor -> StaticElement -> CommandT m
-mine actor block = do
-  blockCoord <- view $ coordOf block
+mine :: (Applicative m, MonadError LevelError m)
+     => StaticElement -> Actor -> Level -> CommandT m
+mine block actor lvl = do
   mconcat
-    [ approach actor blockCoord
+    [ approach actor blockCoord lvl
     , command $ failOnMissingItem actor block blockCoord
              >> T.mine actor block
     ]
+  where blockCoord = lvl ^. coordOf block

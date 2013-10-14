@@ -12,11 +12,11 @@ import Control.Lens.TH
 
 import Actor(Actor)
 import StaticElement(StaticElement)
-import qualified Actor as Actor
-import qualified StaticElement as StaticElement
+import qualified Actor
+import qualified StaticElement
 
 data Tile = Tile
-          { _id :: Identifier
+          { _id :: Identifier Tile
           , _charRepr :: Char
           } deriving Show
 makeLenses ''Tile

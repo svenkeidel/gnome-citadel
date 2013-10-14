@@ -26,7 +26,7 @@ module Level ( Level (..)
              , module Types
              ) where
 
-import Control.Lens ((^.),(%=),(%%=),(.~),(.=),ix,Lens',lens,zoom)
+import Control.Lens ((%%~),(&),(%~),(^.),(%=),(.~),ix,Lens',lens,zoom)
 import Control.Lens.TH
 import Control.Monad.State
 import Control.Applicative
@@ -51,12 +51,12 @@ import qualified Actor
 import qualified StaticElement
 import qualified Path as P
 
-data Level = Level { _actors            :: M.Map Identifier Actor
-                   , _staticElements    :: M.Map Identifier StaticElement
+data Level = Level { _actors            :: M.Map (Identifier Actor) Actor
+                   , _staticElements    :: M.Map (Identifier StaticElement) StaticElement
                    , _nextFreeId        :: Counter
                    , _bounds            :: (Int, Int)
-                   , _idToCoord         :: M.Map Identifier Coord
-                   , _coordToId         :: M.Map Coord [Identifier]
+                   , _idToCoord         :: M.Map (Identifier (Either Actor StaticElement)) Coord
+                   , _coordToId         :: M.Map Coord [Identifier (Either Actor StaticElement)]
                    , _walkable          :: Level -> Coord -> Bool
                    }
 makeLenses ''Level
@@ -131,28 +131,28 @@ coordOf tile = lens getter setter
     getter lvl =
       fromMaybe (error $ "the identifer '" ++ show (toTile tile) ++ "' has no assigned coordinate")
       $ M.lookup (toTile tile ^. Tile.id) (lvl ^. idToCoord)
-    setter lvl dst = flip execState lvl $ do
-      idToCoord . ix tid .= dst
-      coordToId . ix src %= L.delete tid
-      coordToId . ix dst %= (tid :)
+    setter lvl dst = lvl
+                   & idToCoord . ix tid .~ dst
+                   & coordToId . ix src %~ L.delete tid
+                   & coordToId . ix dst %~ (tid :)
       where
         tid = toTile tile ^. Tile.id
         src = getter lvl
 
-isWalkable :: Coord -> LG.Getter Level Bool
-isWalkable c = LG.to (\lvl -> _walkable lvl lvl c)
+isWalkable :: Coord -> Level -> Bool
+isWalkable c lvl = _walkable lvl lvl c
 
 -- | searches a path from one coordinate in a level to another. It
 -- uses the walkable heuristik to find a suitable path.
-findPath :: Coord -> Coord -> LG.Getter Level (Maybe P.Path)
-findPath from to = LG.to (\lvl -> P.defaultPath (lvl ^-> walkable) from to)
+findPath :: Coord -> Coord -> Level -> (Maybe P.Path)
+findPath from to lvl = P.defaultPath (lvl ^-> walkable) from to
 
-findArea :: Coord -> [Coord] -> LG.Getter Level (Maybe P.Path)
-findArea from to = LG.to (\lvl -> P.findArea (lvl ^-> walkable) from to)
+findArea :: Coord -> [Coord] -> Level -> Maybe P.Path
+findArea from to lvl = P.findArea (lvl ^-> walkable) from to
 
 -- | filters tiles of a level by a predicate and returns the
 -- satisfying tile as a list.
-findTile :: TileRepr t => LG.Getter Level (M.Map Identifier t) -> (t -> Bool) -> LG.Getter Level [t]
+findTile :: TileRepr t => LG.Getter Level (M.Map (Identifier a) t) -> (t -> Bool) -> LG.Getter Level [t]
 findTile tileGetter f = LG.to (\lvl -> M.elems $ M.filter f $ lvl ^. tileGetter)
 
 findActor :: (Actor -> Bool) -> LG.Getter Level [Actor]
@@ -161,11 +161,10 @@ findActor = findTile actors
 findStaticElement :: (StaticElement -> Bool) -> LG.Getter Level [StaticElement]
 findStaticElement = findTile staticElements
 
-deleteFromCoords :: MonadState Level m => TileRepr t => t -> m ()
-deleteFromCoords t = do
-  c <- idToCoord %%= deleteLookup tid
-  maybe (return ()) (\c' -> coordToId . ix c' %= L.delete tid) c
+deleteFromCoords :: TileRepr t => t -> Level -> Level
+deleteFromCoords t level = maybe level' (\c' -> level' & coordToId . ix c' %~ L.delete tid) c
   where
+    (c, level') = level & idToCoord %%~ deleteLookup tid
     tid = toTile t ^. Tile.id
     deleteLookup = M.updateLookupWithKey (const . const Nothing)
 
