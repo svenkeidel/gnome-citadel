@@ -1,6 +1,7 @@
 {-# LANGUAGE ScopedTypeVariables #-}
 module CommandSpec(main, spec) where
 
+import Control.Lens (_1)
 import Control.Monad.State
 import Control.Monad.Error
 
@@ -35,10 +36,8 @@ spec = describe "An Execution" $ do
       gameStepShouldChangeLevelTo expected =
         executeGameStep' >=> mapLevel (levelShouldBe expected)
 
-      mapLevel :: Monad m => (Level -> m Level) -> SchedulerState -> m SchedulerState
-      mapLevel f (lvl, cmdSched) = do
-        lvl' <- f lvl
-        return $ (lvl', cmdSched)
+      mapLevel :: Functor m => (Level -> m Level) -> SchedulerState -> m SchedulerState
+      mapLevel = _1
 
       addCommandT' :: Monad m => (Level -> CommandT m) -> SchedulerState -> m SchedulerState
       addCommandT' f (lvl,cmdSched) = do
