@@ -17,6 +17,7 @@ import Control.Lens(zoom,contains)
 import Control.Lens.TH
 import Control.Lens.Operators
 import Control.Monad.State
+import Control.Monad.Error
 import Control.Applicative
 
 import Data.Default
@@ -66,12 +67,18 @@ data TaskManager = TaskManager { _inactive :: Set.Set Task
 makeLenses ''TaskManager
 
 taskManager :: TaskManager
-taskManager = TaskManager { _inactive       = Set.empty
-                          , _active         = Set.empty
-                          , _taskAssignment = M.empty
+taskManager = TaskManager { _inactive       = def
+                          , _active         = def
+                          , _taskAssignment = def
                           , _reachableBy    = error "TaskManager.reachableBy undefined"
                           , _nextFreeId     = def
                           }
+
+addTaskE :: (Identifier Task -> Either e Task) -> TaskManager -> Either e TaskManager
+addTaskE t tm = let (task,tm') = flip runState tm $ t <$> zoom nextFreeId freshId
+                in case task of
+                  Left e -> Left e
+                  Right task' -> Right $ tm' & inactive %~ Set.insert task'
 
 -- | Adds a task to the task manager. The task is initial inactive.
 addTask :: (Identifier Task -> Task) -> TaskManager -> TaskManager
