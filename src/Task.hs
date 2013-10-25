@@ -4,6 +4,7 @@ module Task ( Task (..)
             , target
             , taskType
             , command
+            , precondition
             ) where
 
 import Prelude hiding (id)
@@ -17,18 +18,21 @@ import Coords
 import Level.Command(Command)
 import Actor(Actor)
 
+import Level
+
 data Task = Task { _id :: Identifier Task
                  , _target :: Coord
                  , _taskType :: TaskType
                  , _command :: Actor -> Command
+                 , _precondition :: Level -> Bool
                  }
 makeLenses ''Task
 
 instance Show Task where
   show task = "Task "
-           ++ "{ _id = " ++ (show $ task ^. id)
-           ++ ", _target = " ++ (show $ task ^. target)
-           ++ ", _type = " ++ (show $ task ^. taskType)
+           ++ "{ _id = " ++ show (task ^. id)
+           ++ ", _target = " ++ show (task ^. target)
+           ++ ", _type = " ++ show (task ^. taskType)
            ++ " }"
 
 instance Eq Task where
