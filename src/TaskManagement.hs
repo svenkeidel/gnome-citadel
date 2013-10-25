@@ -7,6 +7,7 @@ module TaskManagement ( TaskManager
                       , inactive
                       , taskAssignment
                       , addTask
+                      , addTaskE
                       , canBeDoneBy
                       , bestForTheJob
                       , assignTasks
@@ -17,7 +18,6 @@ import Control.Lens(zoom,contains)
 import Control.Lens.TH
 import Control.Lens.Operators
 import Control.Monad.State
-import Control.Monad.Error
 import Control.Applicative
 
 import Data.Default

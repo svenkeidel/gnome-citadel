@@ -4,11 +4,10 @@ module Level.Command where
 import Control.Lens ((^.))
 import Control.Lens.Cons (_tail)
 import Control.Monad.Error
-import Control.Applicative
 
 import Data.Monoid
 
-import qualified Data.Traversable as DT
+import qualified Data.Foldable as DF
 
 import Actor
 import Coords
@@ -35,35 +34,32 @@ runCommandT :: CommandT m -> m Command
 runCommandT = runUnfoldT
 
 -- | find a way to the destination and move the actor to it
-approach :: (Applicative m, MonadError LevelError m)
-         => Actor -> Coord -> Level -> CommandT m
-approach actor dest lvl = do
+approach :: Actor -> Coord -> Level -> Command
+approach actor dest lvl =
   case maybePath of
-    Just path -> commandT $ DT.foldMapDefault (return . T.move actor) (path ^. pathCoords . _tail)
-    Nothing   -> throwError $ PathNotFound fromCoord dest
+    Just path -> DF.foldMap (return . T.move actor) (path ^. pathCoords . _tail)
+    Nothing   -> return (const . throwError $ PathNotFound fromCoord dest)
   where
     fromCoord  = lvl ^. coordOf actor
     maybePath  = findArea fromCoord destCoords lvl
     destCoords = if isWalkable dest lvl
                  then [dest]
-                 else filter (flip isWalkable lvl) (neighbors2d dest)
+                 else filter (`isWalkable` lvl) (neighbors2d dest)
 
-pickup :: (Applicative m, MonadError LevelError m)
-       => Actor -> StaticElement -> Level -> CommandT m
-pickup actor item lvl = do
+pickup :: Actor -> StaticElement -> Level -> Command
+pickup actor item lvl =
   mconcat
     [ approach actor itemCoord lvl
-    , command $ failOnMissingItem actor item itemCoord
+    , return $ failOnMissingItem actor item itemCoord
              >> T.pickup actor item
     ]
   where itemCoord = lvl ^. coordOf item
 
-mine :: (Applicative m, MonadError LevelError m)
-     => StaticElement -> Actor -> Level -> CommandT m
-mine block actor lvl = do
+mine :: StaticElement -> Actor -> Level -> Command
+mine block actor lvl =
   mconcat
     [ approach actor blockCoord lvl
-    , command $ failOnMissingItem actor block blockCoord
+    , return $ failOnMissingItem actor block blockCoord
              >> T.mine actor block
     ]
   where blockCoord = lvl ^. coordOf block

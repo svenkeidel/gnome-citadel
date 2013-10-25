@@ -1,7 +1,9 @@
 module Level.Task where
 
+import Control.Lens.Operators
+
 import Level
-import Level.Command
+import qualified Level.Command as Command
 import StaticElement(StaticElement)
 import Task
 

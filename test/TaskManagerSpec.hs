@@ -1,90 +1,81 @@
 module TaskManagerSpec(main, spec) where
-{-
-import Control.Lens((^.),(.=),use)
-import Control.Monad.State
-import Control.Monad.Error
+-- import Control.Lens((^.),(.=),use)
+-- import Control.Monad.State
+-- import Control.Monad.Error
 
-import Data.Maybe
+-- import Data.Maybe
 
-import Level
-import TaskManagement
-import Task
-import TestHelper
--}
+-- import Level
+-- import TaskManagement
+-- import Task
+-- import TestHelper
 
 import Test.Hspec
-
 
 main :: IO ()
 main = hspec spec
 
+-- everything :: a -> b -> Bool
+-- everything _ _ = True
 
 spec :: Spec
 spec = describe "The TaskManager" $ do
   return ()
-{-
-  let lvl = createLevel $
-              unlines [ "## "
-                      , " # "
-                      , "@  "
-                      ]
-      tskMgr = taskManager lvl
-      tId = 1
-      task = mine (from2d (1,0))
-      everything _ _ = True
+  -- let lvl = createLevel $
+  --             unlines [ "## "
+  --                     , " # "
+  --                     , "@  "
+  --                     ]
+  --     tskMgr = taskManager lvl
+  --     tId = 1
+  --     task = mine (from2d (1,0))
 
-      taskManagerShouldSatisfy x = do
-        tskMgr' <- get
-        lift $ tskMgr' `shouldSatisfy` x
+  --     taskManagerShouldSatisfy x tm =
+  --       lift $ tm `shouldSatisfy` x
 
-      levelShouldBe s = do
-        lvl' <- use level
-        lift $ lift $ show lvl' `shouldBe` s
+  --     gameStepShouldChangeLevelTo s = do
+  --       executeGameStep
+  --       levelShouldBe (unlines s)
 
-      gameStepShouldChangeLevelTo s = do
-        executeGameStep
-        levelShouldBe (unlines s)
+  -- context "asking for a task" $ do
+  --   it "should return nothing if the task cannot be found" $ do
+  --     let wrongTaskId = 42
+  --     (tskMgr ^. getTask wrongTaskId) `shouldSatisfy` isNothing
 
-  context "asking for a task" $ do
-    it "should return nothing if the task cannot be found" $ do
-      let wrongTaskId = 42
-      (tskMgr ^. getTask wrongTaskId) `shouldSatisfy` isNothing
+  -- context "when adding tasks" $ do
+  --   it "hasTask returns true only for the added task" $ do
+  --     void $ flip runTaskManager lvl $ do
+  --       reachable .= everything
+  --       addTask task
+  --       taskManagerShouldSatisfy (^. hasTask tId)
+  --       taskManagerShouldSatisfy (\lvl' -> not $ lvl' ^. hasTask (tId+1))
 
-  context "when adding tasks" $ do
-    it "hasTask returns true only for the added task" $ do
-      void $ flip runTaskManager lvl $ do
-        reachable .= everything
-        addTask task
-        taskManagerShouldSatisfy (^. hasTask tId)
-        taskManagerShouldSatisfy (\lvl' -> not $ lvl' ^. hasTask (tId+1))
+  --   it "gets assigned to a dwarf and executed" $ do
 
-    it "gets assigned to a dwarf and executed" $ do
+  --     pending
 
-      pending
+  --     e <- runErrorT $ flip runTaskManager lvl $ do
 
-      e <- runErrorT $ flip runTaskManager lvl $ do
+  --       reachable .= everything
 
-        reachable .= everything
+  --       addTask task
 
-        addTask task
+  --       assignTasks
 
-        assignTasks
+  --       gameStepShouldChangeLevelTo [ "## "
+  --                                   , "@# "
+  --                                   , "   "
+  --                                   ]
 
-        gameStepShouldChangeLevelTo [ "## "
-                                    , "@# "
-                                    , "   "
-                                    ]
-
-        gameStepShouldChangeLevelTo [ "#@ "
-                                    , " # "
-                                    , "   "
-                                    ]
+  --       gameStepShouldChangeLevelTo [ "#@ "
+  --                                   , " # "
+  --                                   , "   "
+  --                                   ]
 
 
-        gameStepShouldChangeLevelTo [ "#@ "
-                                    , " # "
-                                    , "   "
-                                    ]
+  --       gameStepShouldChangeLevelTo [ "#@ "
+  --                                   , " # "
+  --                                   , "   "
+  --                                   ]
 
-      e `shouldSatisfy` isRight
--}
+  --     e `shouldSatisfy` isRight
