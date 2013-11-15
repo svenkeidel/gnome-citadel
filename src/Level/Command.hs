@@ -34,8 +34,8 @@ runCommandT :: CommandT m -> m Command
 runCommandT = runUnfoldT
 
 -- | find a way to the destination and move the actor to it
-approach :: Actor -> Coord -> Level -> Command
-approach actor dest lvl =
+approach :: Coord -> Actor -> Level -> Command
+approach dest actor lvl =
   case maybePath of
     Just path -> DF.foldMap (return . T.move actor) (path ^. pathCoords . _tail)
     Nothing   -> return (const . throwError $ PathNotFound fromCoord dest)
@@ -46,10 +46,10 @@ approach actor dest lvl =
                  then [dest]
                  else filter (`isWalkable` lvl) (neighbors2d dest)
 
-pickup :: Actor -> StaticElement -> Level -> Command
-pickup actor item lvl =
+pickup :: StaticElement -> Actor -> Level -> Command
+pickup item actor lvl =
   mconcat
-    [ approach actor itemCoord lvl
+    [ approach itemCoord actor lvl
     , return $ failOnMissingItem actor item itemCoord
              >> T.pickup actor item
     ]
@@ -58,7 +58,7 @@ pickup actor item lvl =
 mine :: StaticElement -> Actor -> Level -> Command
 mine block actor lvl =
   mconcat
-    [ approach actor blockCoord lvl
+    [ approach blockCoord actor lvl
     , return $ failOnMissingItem actor block blockCoord
              >> T.mine actor block
     ]

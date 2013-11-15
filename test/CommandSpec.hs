@@ -48,7 +48,7 @@ spec = describe "An Execution" $ do
     it "moves an actor in multiple game steps to a destination coordinate" $ do
 
       e <- runErrorT $
-        addCommand' (approach dwarf' (from2d (2,0)))
+        addCommand' (approach (from2d (2,0)) dwarf')
         >=>
         gameStepShouldChangeLevelTo [ "## "
                                     , " # "
@@ -74,7 +74,7 @@ spec = describe "An Execution" $ do
 
     it "should approach an adjacent field if the destination is blocked" $ do
       e <- runErrorT $
-        addCommand' (approach dwarf' (from2d (1,0))) >=>
+        addCommand' (approach (from2d (1,0)) dwarf') >=>
         gameStepShouldChangeLevelTo [ "## "
                                     , "@# "
                                     , "   "

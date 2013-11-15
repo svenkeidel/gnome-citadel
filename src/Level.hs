@@ -144,7 +144,7 @@ isWalkable c lvl = _walkable lvl lvl c
 
 -- | searches a path from one coordinate in a level to another. It
 -- uses the walkable heuristik to find a suitable path.
-findPath :: Coord -> Coord -> Level -> (Maybe P.Path)
+findPath :: Coord -> Coord -> Level -> Maybe P.Path
 findPath from to lvl = P.defaultPath (lvl ^-> walkable) from to
 
 findArea :: Coord -> [Coord] -> Level -> Maybe P.Path
@@ -168,10 +168,10 @@ deleteFromCoords t level = maybe level' (\c' -> level' & coordToId . ix c' %~ L.
     tid = toTile t ^. Tile.id
     deleteLookup = M.updateLookupWithKey (const . const Nothing)
 
-isReachable :: Coord -> LG.Getter Level Bool
-isReachable target = LG.to $ \lvl ->
-  any (canReach lvl) (lvl ^. actors . LG.to M.elems)
-  where canReach :: Level -> Actor -> Bool
-        canReach lvl actor = isJust $ do
+isReachable :: Coord -> Level -> Bool
+isReachable target lvl =
+  any canReach (lvl ^. actors . LG.to M.elems)
+  where canReach :: Actor -> Bool
+        canReach actor = isJust $ do
           actorCoord <- M.lookup (actor ^. Actor.id) (lvl ^. idToCoord)
           P.defaultPath (lvl ^-> walkable) actorCoord target

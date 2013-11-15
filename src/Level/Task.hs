@@ -8,4 +8,10 @@ import StaticElement(StaticElement)
 import Task
 
 mine :: StaticElement -> Level -> Identifier Task -> Task
-mine s lvl i = Task i (lvl ^. coordOf s) Mine (Command.mine s)
+mine s lvl i = Task
+             { _id = i
+             , _target = lvl ^. coordOf s
+             , _taskType = Mine
+             , _command = Command.mine s
+             , _precondition = \lvl' -> isReachable (lvl' ^. coordOf s) lvl'
+             }

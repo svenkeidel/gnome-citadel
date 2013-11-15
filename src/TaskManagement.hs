@@ -114,15 +114,15 @@ assignTasks lvl (cmdScheduler0, tm0) = F.foldl go (cmdScheduler0, tm0) (tm0 ^. i
     go :: (CommandScheduler, TaskManager) -> Task -> (CommandScheduler, TaskManager)
     go (cmdScheduler, tm) task =
       case bestForTheJob task (M.elems $ lvl ^. Level.actors) lvl tm of
-        Just actor -> assignTo task actor (cmdScheduler, tm)
+        Just actor -> assignTo task actor lvl (cmdScheduler, tm)
         Nothing    -> (cmdScheduler, tm)
 
 -- | Assign the given task to the given actor and add the appropriate
 -- command to the command scheduler.
-assignTo :: Task -> Actor -> (CommandScheduler, TaskManager) -> (CommandScheduler, TaskManager)
-assignTo task actor (cmdScheduler, tm) = (cmdScheduler', tm')
+assignTo :: Task -> Actor -> Level -> (CommandScheduler, TaskManager) -> (CommandScheduler, TaskManager)
+assignTo task actor lvl (cmdScheduler, tm) = (cmdScheduler', tm')
   where
     tm' = tm & inactive       %~ Set.delete task
              & active         %~ Set.insert task
              & taskAssignment %~ M.insert (actor ^. Actor.id) (task ^. Task.id)
-    cmdScheduler' = Scheduler.addCommand (Task._command task actor) cmdScheduler
+    cmdScheduler' = Scheduler.addCommand (Task._command task actor lvl) cmdScheduler

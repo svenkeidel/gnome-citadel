@@ -1,16 +1,21 @@
 module TaskManagerSpec(main, spec) where
--- import Control.Lens((^.),(.=),use)
+
+-- import Control.Lens(_1)
 -- import Control.Monad.State
 -- import Control.Monad.Error
 
--- import Data.Maybe
-
 -- import Level
 -- import TaskManagement
--- import Task
--- import TestHelper
 
+-- import qualified Level.Task as LevelTask
+-- import Level.Scheduler
+-- import Level.Transformation
+
+-- import TestHelper
 import Test.Hspec
+
+-- type TaskManagerState = (Level, CommandScheduler, TaskManager)
+-- type TaskManagerStateE = ErrorT LevelError IO TaskManagerState
 
 main :: IO ()
 main = hspec spec
@@ -19,63 +24,61 @@ main = hspec spec
 -- everything _ _ = True
 
 spec :: Spec
-spec = describe "The TaskManager" $ do
-  return ()
-  -- let lvl = createLevel $
-  --             unlines [ "## "
-  --                     , " # "
-  --                     , "@  "
-  --                     ]
-  --     tskMgr = taskManager lvl
-  --     tId = 1
-  --     task = mine (from2d (1,0))
+spec = describe "The TaskManager" $ return ()
+--   let lvl = createLevel $
+--               unlines [ "## "
+--                       , " # "
+--                       , "@  "
+--                       ]
+--       tId = 1
+--       task = LevelTask.mine $ findWall (1,0) lvl
 
-  --     taskManagerShouldSatisfy x tm =
-  --       lift $ tm `shouldSatisfy` x
+--       -- taskManagerShouldSatisfy x tm =
+--       --   lift $ tm `shouldSatisfy` x
 
-  --     gameStepShouldChangeLevelTo s = do
-  --       executeGameStep
-  --       levelShouldBe (unlines s)
+--       executeGameStep' :: TaskManagerState -> TaskManagerStateE
+--       executeGameStep' (lvl, sched, tm)= ErrorT . return $ fmap (\(a,b) -> (a,b,tm)) (executeGameStep (lvl,sched))
+
+--       gameStepShouldChangeLevelTo :: [String] -> TaskManagerState -> TaskManagerStateE
+--       gameStepShouldChangeLevelTo s =
+--         executeGameStep' >=> mapLevel (levelShouldBe s)
+
+--       mapLevel :: Functor m => (Level -> m Level) -> TaskManagerState -> m TaskManagerState
+--       mapLevel = _1
 
   -- context "asking for a task" $ do
   --   it "should return nothing if the task cannot be found" $ do
-  --     let wrongTaskId = 42
-  --     (tskMgr ^. getTask wrongTaskId) `shouldSatisfy` isNothing
+  --     undefined
 
   -- context "when adding tasks" $ do
   --   it "hasTask returns true only for the added task" $ do
-  --     void $ flip runTaskManager lvl $ do
-  --       reachable .= everything
-  --       addTask task
-  --       taskManagerShouldSatisfy (^. hasTask tId)
-  --       taskManagerShouldSatisfy (\lvl' -> not $ lvl' ^. hasTask (tId+1))
+  --     undefined
 
-  --   it "gets assigned to a dwarf and executed" $ do
+    -- it "gets assigned to a dwarf and executed" $ do
+    --   pending
 
-  --     pending
+    --   e <- runErrorT $ flip runTaskManager lvl $ do
 
-  --     e <- runErrorT $ flip runTaskManager lvl $ do
+    --     reachable .= everything
 
-  --       reachable .= everything
+    --     addTask task
 
-  --       addTask task
+    --     assignTasks
 
-  --       assignTasks
+    --     gameStepShouldChangeLevelTo [ "## "
+    --                                 , "@# "
+    --                                 , "   "
+    --                                 ]
 
-  --       gameStepShouldChangeLevelTo [ "## "
-  --                                   , "@# "
-  --                                   , "   "
-  --                                   ]
-
-  --       gameStepShouldChangeLevelTo [ "#@ "
-  --                                   , " # "
-  --                                   , "   "
-  --                                   ]
+    --     gameStepShouldChangeLevelTo [ "#@ "
+    --                                 , " # "
+    --                                 , "   "
+    --                                 ]
 
 
-  --       gameStepShouldChangeLevelTo [ "#@ "
-  --                                   , " # "
-  --                                   , "   "
-  --                                   ]
+    --     gameStepShouldChangeLevelTo [ "#@ "
+    --                                 , " # "
+    --                                 , "   "
+    --                                 ]
 
-  --     e `shouldSatisfy` isRight
+    --   e `shouldSatisfy` isRight

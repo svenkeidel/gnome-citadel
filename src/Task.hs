@@ -23,7 +23,7 @@ import Level
 data Task = Task { _id :: Identifier Task
                  , _target :: Coord
                  , _taskType :: TaskType
-                 , _command :: Actor -> Command
+                 , _command :: Actor -> Level -> Command
                  , _precondition :: Level -> Bool
                  }
 makeLenses ''Task
