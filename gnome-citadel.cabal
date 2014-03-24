@@ -50,7 +50,7 @@ test-suite specs
   main-is:             Spec.hs
   build-depends:       base ==4.*,
                        containers,
-                       hspec == 1.6.*,
+                       hspec >= 1.9,
                        gnome-citadel,
                        QuickCheck,
                        mtl,
