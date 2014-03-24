@@ -1,13 +1,13 @@
 {-# LANGUAGE FlexibleContexts #-}
 module SchedulerSpec(main, spec) where
 
-import Test.Hspec
-import Data.Char(ord)
-import Control.Monad.State
-import Data.List(isInfixOf,sort)
+import           Control.Monad.State
+import           Data.Char(ord)
+import           Data.List (sort)
+import           Test.Hspec
 
 import qualified Scheduler as S
-import Unfold
+import           Unfold
 
 main :: IO ()
 main = hspec spec
@@ -16,7 +16,6 @@ spec :: Spec
 spec = do
   let e  = modify (S.add (unfold [1..10 :: Int] unfoldList))
       e' = modify (S.add (unfold "abcdef" (fmap ord . unfoldList)))
-      list `shouldContain` subList = sort list `shouldSatisfy` (sort subList `isInfixOf`)
       next' :: Monad m => StateT (S.Scheduler Unfold a) m [a]
       next' = state S.next
 
@@ -40,7 +39,7 @@ spec = do
             s1 <- next'
             lift $ s1 `shouldContain` [(1, 1), (9, 1)]
             s2 <- next'
-            lift $ s2 `shouldContain` [(2, 2), (8, 2)]
+            lift $ sort s2 `shouldContain` [(2, 2), (8, 2)]
             s3 <- next'
             lift $ s3 `shouldContain` [(3, 3), (7, 3)]
       void $ execStateT assertions S.empty
