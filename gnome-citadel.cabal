@@ -43,13 +43,6 @@ library
                        data-default == 0.5.*,
                        deepseq == 1.3.*
 
-executable sdl-test
-  hs-source-dirs:      test
-  main-is:             Game/SDLTest.hs
-  build-depends:       base ==4.*,
-                       SDL,
-                       SDL-image
-
 test-suite specs
   type:                exitcode-stdio-1.0
   ghc-options:         -Wall -Werror
