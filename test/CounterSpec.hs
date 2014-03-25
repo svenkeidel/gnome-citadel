@@ -17,6 +17,5 @@ spec = describe "A Counter" $ do
 
   it "can generate fresh identifiers" $ do
     void $ flip runStateT (def :: Counter) $ do
-      (n1:n2:n3:[]) <- replicateM 3 freshId
-      lift $ n2 `shouldBe` n1 + 1
-      lift $ n3 `shouldBe` n2 + 1
+      (n1:n2:n3:[]) <- replicateM 3 (state freshId)
+      lift $ (n2 /= n1 && n3 /= n2 && n3 /= n1) `shouldBe` True

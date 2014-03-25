@@ -13,10 +13,10 @@ import Control.Lens.TH
 
 import Data.Ord(comparing)
 
-import Types
+import Counter
 import Coords
 import Level.Command(Command)
-import Actor(Actor)
+import Actor(Actor, TaskType)
 
 import Level
 

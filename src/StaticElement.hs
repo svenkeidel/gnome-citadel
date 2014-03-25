@@ -7,7 +7,7 @@ module StaticElement ( StaticElement (..)
 import Prelude hiding(id)
 
 import Control.Lens.TH
-import Types
+import Counter
 
 data StaticElement = StaticElement { _id :: Identifier StaticElement
                                    , _charRepr :: Char

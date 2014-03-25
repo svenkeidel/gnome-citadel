@@ -1,21 +1,21 @@
-{-# LANGUAGE TemplateHaskell, RankNTypes, FlexibleContexts #-}
 module Counter ( Counter
+               , Identifier(..)
                , freshId
+               , asIdentifierOf
                ) where
-
-import Control.Lens ((<+=))
-import Control.Lens.TH
-import Control.Monad.State
 
 import Data.Default
 
-import Types
+newtype Identifier a = Identifier Int
+  deriving (Eq, Ord, Show)
 
-newtype Counter = Counter { _counter :: Int }
-makeLenses ''Counter
+newtype Counter = Counter Int
 
-freshId :: MonadState Counter m => m (Identifier a)
-freshId = counter <+= 1
+freshId :: Counter -> (Identifier a, Counter)
+freshId (Counter n) = (Identifier $ n+1, Counter $ n + 1)
 
 instance Default Counter where
   def = Counter 0
+
+asIdentifierOf :: Identifier a -> Identifier b
+asIdentifierOf (Identifier i) = Identifier i

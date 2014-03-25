@@ -1,6 +1,7 @@
 module TilesSpec(main, spec) where
 
 import Test.Hspec
+import Counter
 import Tile
 import TestTiles
 import Renderable
@@ -12,6 +13,6 @@ spec :: Spec
 spec = do
   describe "A Tile" $ do
     it "can be rendered to a char" $ do
-      render (toTile wall)  `shouldBe` '#'
-      render (toTile dwarf) `shouldBe` '@'
-      render (toTile free)  `shouldBe` ' '
+      render (toTile $ wall (Identifier 1))  `shouldBe` '#'
+      render (toTile $ dwarf (Identifier 2)) `shouldBe` '@'
+      render (toTile $ free (Identifier 3))  `shouldBe` ' '

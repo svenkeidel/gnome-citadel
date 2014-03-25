@@ -4,6 +4,7 @@ import Control.Lens.Operators
 -- import Control.Monad.State
 import Control.Monad.Error
 
+import Counter
 import Level
 import TaskManagement
 
@@ -26,7 +27,7 @@ spec = describe "The TaskManager" $ do
                                   , " # "
                                   , "@  "
                                   ]
-      task = LevelTask.mine (findWall (1,0) lvl) lvl
+      task = LevelTask.mine (findWall (1,0) lvl) lvl (Identifier 1)
 
       executeGameStep' :: TaskManagerState -> TaskManagerStateE
       executeGameStep' (lvl', sched, tm) = ErrorT . return $ fmap (\(a,b) -> (a,b,tm)) (S.executeGameStep (lvl',sched))
@@ -51,7 +52,7 @@ spec = describe "The TaskManager" $ do
           cmdSched = S.empty
           (_, tm') = assignTasks lvl (cmdSched, tm)
           dwarf = findDwarf lvl
-      isAssignedTo (task 1) dwarf tm' `shouldBe` True
+      isAssignedTo task dwarf tm' `shouldBe` True
 
     it "gets assigned to a dwarf and executed" $ do
       let tm = taskManager & addTask task

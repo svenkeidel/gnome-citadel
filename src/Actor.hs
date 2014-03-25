@@ -1,5 +1,6 @@
 {-# LANGUAGE TemplateHaskell, FlexibleContexts #-}
 module Actor ( Actor (..)
+             , TaskType(..)
              , id
              , charRepr
              , pickItem
@@ -14,8 +15,10 @@ import Control.Lens.TH
 
 import qualified Data.Set as Set
 
-import Types
+import Counter
 import qualified StaticElement as S
+
+data TaskType = Mine | Lumber deriving (Show,Eq,Ord)
 
 data Actor = Actor { _id :: Identifier Actor
                    , _charRepr :: Char

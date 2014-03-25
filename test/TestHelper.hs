@@ -14,8 +14,10 @@ import Test.Hspec(shouldBe)
 
 import Data.List(find)
 import Data.Maybe(isJust)
+import Data.Default
 
 import Actor(Actor)
+import Counter
 import Level
 import Level.Transformation (LevelError)
 import Renderable
@@ -24,17 +26,18 @@ import Tile
 import TestTiles
 
 createLevel :: String -> Level
-createLevel lvlString = fromString levelBuilder lvlString
-                      & walkable .~ (\lvl coord -> not $ contains '#' (lvl ^. at coord))
+createLevel lvlString =
+  let (lvl,_) = fromString levelBuilder lvlString def
+  in lvl & walkable .~ (\lvl' coord -> not $ contains '#' (lvl' ^. at coord))
   where
     contains x = isJust . find ((x ==) . render)
 
 levelBuilder :: TileBuilder
-levelBuilder char =
+levelBuilder ident char =
   case char of
-    '#' -> Just $ Right wall
-    ' ' -> Just $ Right free
-    '@' -> Just $ Left dwarf
+    '#' -> Just $ Right $ wall (asIdentifierOf ident)
+    ' ' -> Just $ Right $ free (asIdentifierOf ident)
+    '@' -> Just $ Left  $ dwarf (asIdentifierOf ident)
     _   -> error ("unrecognized char " ++ show char)
 
 findDwarf :: Level -> Actor

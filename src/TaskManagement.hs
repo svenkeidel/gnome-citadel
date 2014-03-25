@@ -1,7 +1,6 @@
 {-# LANGUAGE TemplateHaskell, FlexibleContexts, RankNTypes #-}
 module TaskManagement ( TaskManager
                       , taskManager
-                      , nextFreeId
                       , reachableBy
                       , active
                       , inactive
@@ -15,11 +14,9 @@ module TaskManagement ( TaskManager
                       , isAssignedTo
                       ) where
 
-import Control.Lens(zoom,contains)
+import Control.Lens(contains)
 import Control.Lens.TH
 import Control.Lens.Operators
-import Control.Monad.State
-import Control.Applicative
 
 import Data.Default
 import Data.Maybe(listToMaybe, isJust)
@@ -33,7 +30,7 @@ import Actor(Actor)
 import qualified Actor
 import Counter
 import Task
-import Level hiding (actors, isReachable, _nextFreeId)
+import Level hiding (actors, isReachable)
 import qualified Level
 import Level.Scheduler(CommandScheduler)
 import qualified Level.Scheduler as Scheduler
@@ -63,7 +60,6 @@ data TaskManager = TaskManager { _inactive :: Set.Set Task
                                , _active :: Set.Set Task
                                , _reachableBy :: Level -> Task -> Actor -> Bool
                                , _taskAssignment :: M.Map (Identifier Actor) (Identifier Task)
-                               , _nextFreeId :: Counter
                                }
 makeLenses ''TaskManager
 
@@ -72,7 +68,6 @@ taskManager = TaskManager { _inactive       = def
                           , _active         = def
                           , _taskAssignment = def
                           , _reachableBy    = isReachableBy
-                          , _nextFreeId     = def
                           }
 
 isReachableBy :: Level -> Task -> Actor -> Bool
@@ -85,17 +80,14 @@ isReachableBy lvl task actor = isJust maybePath
                       else filter (`isWalkable` lvl) (neighbors2d targetCoord)
 
 
-addTaskE :: (Identifier Task -> Either e Task) -> TaskManager -> Either e TaskManager
-addTaskE t tm = let (task,tm') = flip runState tm $ t <$> zoom nextFreeId freshId
-                in case task of
-                  Left e -> Left e
-                  Right task' -> Right $ tm' & inactive %~ Set.insert task'
+addTaskE :: Either e Task -> TaskManager -> Either e TaskManager
+addTaskE task tm = case task of
+                     Left e -> Left e
+                     Right task' -> Right $ tm & inactive %~ Set.insert task'
 
 -- | Adds a task to the task manager. The task is initial inactive.
-addTask :: (Identifier Task -> Task) -> TaskManager -> TaskManager
-addTask t tm = flip execState tm $ do
-  task <- t <$> zoom nextFreeId freshId
-  inactive %= Set.insert task
+addTask :: Task -> TaskManager -> TaskManager
+addTask task tm = tm & inactive %~ Set.insert task
 
 -- | Determines if the given task can be done by the given actor
 canBeDoneBy :: Task -> Actor -> Level -> TaskManager -> Bool

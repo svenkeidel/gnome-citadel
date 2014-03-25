@@ -5,8 +5,7 @@ module Tile ( Tile(..)
             , TileRepr(..)
             ) where
 
-import Types
-import Control.Applicative
+import Counter
 import Control.Lens.Getter
 import Control.Lens.TH
 
@@ -25,10 +24,10 @@ class TileRepr t where
   toTile :: t -> Tile
 
 instance TileRepr StaticElement where
-  toTile = Tile <$> view StaticElement.id <*> view StaticElement.charRepr
+  toTile s = Tile (asIdentifierOf $ s ^. StaticElement.id) (s ^. StaticElement.charRepr)
 
 instance TileRepr Actor where
-  toTile = Tile <$> view Actor.id <*> view Actor.charRepr
+  toTile a = Tile (asIdentifierOf $ a ^. Actor.id) (a ^. Actor.charRepr)
 
 instance TileRepr Tile where
   toTile = Prelude.id

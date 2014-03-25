@@ -2,15 +2,15 @@ module TestTiles where
 
 import qualified Data.Set as Set
 
-import Types
+import Counter
 import Actor
 import StaticElement
 
-wall :: StaticElement
-wall = StaticElement undefined '#'
+wall :: Identifier StaticElement -> StaticElement
+wall i = StaticElement i '#'
 
-free :: StaticElement
-free = StaticElement undefined ' '
+free :: Identifier StaticElement -> StaticElement
+free i = StaticElement i ' '
 
-dwarf :: Actor
-dwarf = Actor undefined '@' [] (Set.fromList [Mine])
+dwarf :: Identifier Actor -> Actor
+dwarf i = Actor i '@' [] (Set.fromList [Mine])
