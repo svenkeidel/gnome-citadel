@@ -9,7 +9,7 @@ import Prelude hiding(id)
 import Control.Lens.TH
 import Types
 
-data StaticElement = StaticElement { _id :: Identifier
+data StaticElement = StaticElement { _id :: Identifier StaticElement
                                    , _charRepr :: Char
                                    } deriving Show
 

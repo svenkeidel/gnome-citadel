@@ -2,12 +2,8 @@
 module Level ( Level (..)
              , emptyLevel
 
-             {- Lenses -}
              , actors
              , staticElements
-             , nextFreeId
-             , activeTaskQueue
-             , inactiveTaskQueue
              , bounds
              , idToCoord
              , coordToId
@@ -15,54 +11,52 @@ module Level ( Level (..)
 
              , fromString
              , at
-             , freshId
              , coordOf
              , findPath
              , findArea
              , findActor
              , findStaticElement
              , isWalkable
+             , isReachable
              , deleteFromCoords
+
+             , TileBuilder
 
              , module Coords
              , module Types
              ) where
 
-
-import Control.Lens ((^.),(%=),(<+=),(%%=),(.~),(.=),ix,Lens',lens)
+import Control.Lens ((%%~),(&),(%~),(^.),(%=),(.~),ix,Lens',lens,zoom)
 import Control.Lens.TH
 import Control.Monad.State
 import Control.Applicative
+import Data.Default
 
 import qualified Control.Lens.Getter as LG
-import qualified Data.Sequence as S
 import qualified Data.Map as M
 import qualified Data.List as L
 
-import Data.Maybe(mapMaybe,fromMaybe)
+import Data.Maybe(mapMaybe,fromMaybe,isJust)
 
+import Counter
 import Types
 import Tile
-import Task
-import Queue
 import Renderable
 import Coords
 import Utils
 
 import Actor(Actor)
 import StaticElement(StaticElement)
-import qualified Actor as Actor
-import qualified StaticElement as StaticElement
+import qualified Actor
+import qualified StaticElement
 import qualified Path as P
 
-data Level = Level { _actors            :: M.Map Identifier Actor
-                   , _staticElements    :: M.Map Identifier StaticElement
-                   , _nextFreeId        :: Identifier
-                   , _activeTaskQueue   :: Queue Task
-                   , _inactiveTaskQueue :: Queue Task
+data Level = Level { _actors            :: M.Map (Identifier Actor) Actor
+                   , _staticElements    :: M.Map (Identifier StaticElement) StaticElement
+                   , _nextFreeId        :: Counter
                    , _bounds            :: (Int, Int)
-                   , _idToCoord         :: M.Map Identifier Coord
-                   , _coordToId         :: M.Map Coord [Identifier]
+                   , _idToCoord         :: M.Map (Identifier (Either Actor StaticElement)) Coord
+                   , _coordToId         :: M.Map Coord [Identifier (Either Actor StaticElement)]
                    , _walkable          :: Level -> Coord -> Bool
                    }
 makeLenses ''Level
@@ -72,23 +66,14 @@ instance Show Level where
 
 -- | smart constructor for an empty level
 emptyLevel :: Level
-emptyLevel =
-  Level
-  { _actors = M.empty
-  , _staticElements = M.empty
-  , _nextFreeId = 0
-  , _activeTaskQueue = S.empty
-  , _inactiveTaskQueue = S.empty
-  , _bounds = (0, 0)
-  , _idToCoord = M.empty
-  , _coordToId = M.empty
-  , _walkable = error "walkable heuristik undefined"
-  }
-
--- | returns a fresh identifier that is used to refernce tiles inside
--- the level.
-freshId :: MonadState Level m => m Int
-freshId = nextFreeId <+= 1
+emptyLevel = Level { _actors = def
+                   , _staticElements = def
+                   , _nextFreeId = def
+                   , _bounds = def
+                   , _idToCoord = def
+                   , _coordToId = def
+                   , _walkable = error "walkable heuristik undefined"
+                   }
 
 type TileBuilder = Char -> Maybe (Either Actor StaticElement)
 
@@ -102,7 +87,7 @@ fromString builder str = execState (mapM insert coordStr) emptyLevel
     coords              = [ [ from2d (x,y) | x <- [0..] ] | y <- [0..] ] :: [[Coord]]
     maxT (Coord x1 y1 _) (x2,y2) = (max x1 x2, max y1 y2)
     insert (coord,char) = do
-      nextId <- freshId
+      nextId <- zoom nextFreeId freshId
       case builder char of
         Just (Left  a) -> actors         %= M.insert nextId (Actor.id .~ nextId $ a)
         Just (Right s) -> staticElements %= M.insert nextId (StaticElement.id .~ nextId $ s)
@@ -146,28 +131,28 @@ coordOf tile = lens getter setter
     getter lvl =
       fromMaybe (error $ "the identifer '" ++ show (toTile tile) ++ "' has no assigned coordinate")
       $ M.lookup (toTile tile ^. Tile.id) (lvl ^. idToCoord)
-    setter lvl dst = flip execState lvl $ do
-      idToCoord . ix tid .= dst
-      coordToId . ix src %= L.delete tid
-      coordToId . ix dst %= (tid :)
+    setter lvl dst = lvl
+                   & idToCoord . ix tid .~ dst
+                   & coordToId . ix src %~ L.delete tid
+                   & coordToId . ix dst %~ (tid :)
       where
         tid = toTile tile ^. Tile.id
         src = getter lvl
 
-isWalkable :: Coord -> LG.Getter Level Bool
-isWalkable c = LG.to (\lvl -> _walkable lvl lvl c)
+isWalkable :: Coord -> Level -> Bool
+isWalkable c lvl = _walkable lvl lvl c
 
 -- | searches a path from one coordinate in a level to another. It
 -- uses the walkable heuristik to find a suitable path.
-findPath :: Coord -> Coord -> LG.Getter Level (Maybe P.Path)
-findPath from to = LG.to (\lvl -> P.defaultPath (lvl ^-> walkable) from to)
+findPath :: Coord -> Coord -> Level -> Maybe P.Path
+findPath from to lvl = P.defaultPath (lvl ^-> walkable) from to
 
-findArea :: Coord -> [Coord] -> LG.Getter Level (Maybe P.Path)
-findArea from to = LG.to (\lvl -> P.findArea (lvl ^-> walkable) from to)
+findArea :: Coord -> [Coord] -> Level -> Maybe P.Path
+findArea from to lvl = P.findArea (lvl ^-> walkable) from to
 
 -- | filters tiles of a level by a predicate and returns the
 -- satisfying tile as a list.
-findTile :: TileRepr t => LG.Getter Level (M.Map Identifier t) -> (t -> Bool) -> LG.Getter Level [t]
+findTile :: TileRepr t => LG.Getter Level (M.Map (Identifier a) t) -> (t -> Bool) -> LG.Getter Level [t]
 findTile tileGetter f = LG.to (\lvl -> M.elems $ M.filter f $ lvl ^. tileGetter)
 
 findActor :: (Actor -> Bool) -> LG.Getter Level [Actor]
@@ -176,10 +161,17 @@ findActor = findTile actors
 findStaticElement :: (StaticElement -> Bool) -> LG.Getter Level [StaticElement]
 findStaticElement = findTile staticElements
 
-deleteFromCoords :: MonadState Level m => TileRepr t => t -> m ()
-deleteFromCoords t = do
-  c <- idToCoord %%= deleteLookup tid
-  maybe (return ()) (\c' -> coordToId . ix c' %= L.delete tid) c
+deleteFromCoords :: TileRepr t => t -> Level -> Level
+deleteFromCoords t level = maybe level' (\c' -> level' & coordToId . ix c' %~ L.delete tid) c
   where
+    (c, level') = level & idToCoord %%~ deleteLookup tid
     tid = toTile t ^. Tile.id
     deleteLookup = M.updateLookupWithKey (const . const Nothing)
+
+isReachable :: Coord -> Level -> Bool
+isReachable target lvl =
+  any canReach (lvl ^. actors . LG.to M.elems)
+  where canReach :: Actor -> Bool
+        canReach actor = isJust $ do
+          actorCoord <- M.lookup (actor ^. Actor.id) (lvl ^. idToCoord)
+          P.defaultPath (lvl ^-> walkable) actorCoord target

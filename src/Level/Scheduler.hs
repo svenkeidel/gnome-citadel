@@ -1,19 +1,14 @@
-{-# LANGUAGE TemplateHaskell, RankNTypes, FlexibleContexts, ScopedTypeVariables #-}
-module Level.Scheduler ( CommandScheduler
-                       , level
-                       , runCommandScheduler
+{-# LANGUAGE TemplateHaskell, RankNTypes, FlexibleContexts, ScopedTypeVariables, ViewPatterns #-}
+module Level.Scheduler ( CommandScheduler (CommandScheduler)
+                       , empty
                        , addCommand
                        , addCommandT
                        , executeGameStep
                        ) where
 
-import Control.Lens ((^.),(%=),assign,zoom,use)
+import Control.Lens ((^.),(%~))
 import Control.Lens.TH
-import Control.Monad.State
-import Control.Monad.Reader
-import Control.Monad.Error
-
-import Data.Functor.Identity
+import Control.Monad((>=>))
 
 import Unfold
 import Level
@@ -22,43 +17,32 @@ import Level.Command (Command,CommandT,runCommandT)
 
 import qualified Scheduler as S
 
-data CommandScheduler =
-  CommandScheduler
-  { _scheduler :: S.Scheduler Unfold (LevelTrans Identity)
-  , _level     :: Level
-  }
+newtype CommandScheduler = CommandScheduler { _scheduler :: S.Scheduler Unfold LevelTrans }
 makeLenses ''CommandScheduler
 
--- | Performs a sequence of transformations based on commands on a level.
-runCommandScheduler :: (Monad m) => StateT CommandScheduler m a -> Level -> m Level
-runCommandScheduler s lvl = do
-  cmdSched <- execStateT s (CommandScheduler S.empty lvl)
-  return $ cmdSched ^. level
+instance Show CommandScheduler where
+  show _ = "TODO: implement show instance"
+
+empty :: CommandScheduler
+empty = CommandScheduler S.empty
 
 -- | Adds a command to a schedule. The command is not executed immediately.
-addCommand :: (Monad m, MonadState CommandScheduler m) => Command -> m ()
-addCommand c = scheduler %= execState (S.add c)
+addCommand :: Command -> CommandScheduler -> CommandScheduler
+addCommand command = scheduler %~ S.add command
 
-addCommandT :: (Monad m, Show e, MonadState CommandScheduler m)
-            => CommandT (ReaderT Level (ErrorT e m)) -> m ()
-addCommandT c = do
-  lvl <- use level
-  c' <- runErrorT
-      $ flip runReaderT lvl
-      $ runCommandT c
-  addCommand $ case c' of
-    Left e    -> return $ throwError $ strMsg (show e)
-    Right c'' -> c''
+addCommandT :: Monad m => CommandT m -> CommandScheduler -> m CommandScheduler
+addCommandT c cmdScheduler = do
+  c' <- runCommandT c
+  return $ addCommand c' cmdScheduler
 
 -- | Applies the upcomming sequence of commands to the level. Lifts
 -- all effects into the base monad of the state transformer.
-executeGameStep :: (Functor m, Monad m) => StateT CommandScheduler (ErrorT LevelError m) ()
-executeGameStep = do
-  transformations <- zoom scheduler S.next
-  assign level =<< lift
-                 . ErrorT
-                 . return
-                 . runIdentity
-                 . runErrorT
-                 . execStateT (sequence_ transformations)
-               =<< use level
+executeGameStep :: (Level, CommandScheduler) -> Either LevelError (Level, CommandScheduler)
+executeGameStep (lvl, cmdScheduler) = do
+  -- Kleisli Arrows (>=>) :: (a -> m b) -> (b -> m c) -> (a -> m c)
+  -- used to combine all level transformations into one single transformation
+  -- foldl (>=>) return transformation :: Level -> Either LevelError Level
+  lvl' <- foldl (>=>) return transformations $ lvl :: Either LevelError Level
+  return (lvl', cmdScheduler')
+  where
+    (transformations, CommandScheduler -> cmdScheduler') = S.next (cmdScheduler ^. scheduler)

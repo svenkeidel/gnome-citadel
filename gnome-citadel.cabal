@@ -23,6 +23,7 @@ library
                        Level.Scheduler,
                        Level.Task,
                        Actor,
+                       Counter,
                        Renderable,
                        StaticElement,
                        Scheduler,
@@ -30,7 +31,9 @@ library
                        Queue,
                        Coords,
                        Path,
-                       Path.Internal
+                       Path.Internal,
+                       TaskManagement,
+                       Utils
   Build-depends:       base ==4.*,
                        containers,
                        lens,
@@ -38,24 +41,16 @@ library
                        PSQueue == 1.1.*,
                        transformers == 0.3.*,
                        data-default == 0.5.*,
-                       deepseq == 1.3.*,
-                       safe == 0.3.*
-
-executable sdl-test
-  hs-source-dirs:      test
-  main-is:             Game/SDLTest.hs
-  build-depends:       base ==4.*,
-                       SDL,
-                       SDL-image
+                       deepseq == 1.3.*
 
 test-suite specs
   type:                exitcode-stdio-1.0
-  ghc-options:         -Wall -Werror
+  ghc-options:         -Wall
   hs-source-dirs:      test
   main-is:             Spec.hs
   build-depends:       base ==4.*,
                        containers,
-                       hspec == 1.6.*,
+                       hspec >= 1.9,
                        gnome-citadel,
                        QuickCheck,
                        mtl,

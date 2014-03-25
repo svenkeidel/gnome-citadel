@@ -1,9 +1,9 @@
 {-# LANGUAGE ViewPatterns #-}
+
 module Level.Transformation where
 
-import Control.Lens((^.),(.=),(%=),use,ix)
+import Control.Lens((&),(^.),ix,view,(%~),(.~))
 import Control.Monad.Error
-import Control.Monad.State
 
 import qualified Data.Map as M
 
@@ -13,13 +13,14 @@ import Tile
 
 import Actor (Actor)
 import StaticElement (StaticElement)
-import qualified Actor as Actor
-import qualified StaticElement as StaticElement
+import qualified Actor
+import qualified StaticElement
 
-type LevelTrans m = StateT Level (ErrorT LevelError m) ()
+type LevelTrans = Level -> Either LevelError Level
 
 data LevelError
   = PathBlocked Tile Coord
+  | PathNotFound Coord Coord
   | ItemMissing Actor StaticElement Coord
   | LevelError String
 
@@ -29,6 +30,8 @@ instance Error LevelError where
 instance Show LevelError where
   show (PathBlocked t c) = show $ LevelError $
     "The destination " ++ show c ++ " for the move of " ++ show t ++ " is blocked"
+  show (PathNotFound from to) = show $ LevelError $
+    "There exists no path from " ++ show from ++ " to " ++ show to
   show (ItemMissing a i c) = show $ LevelError $
     "The actor " ++ show a ++ " could not pickup the item " ++ show i ++
     " because it is not at the specified location " ++ show c
@@ -36,29 +39,30 @@ instance Show LevelError where
 
 
 -- | move an actor or static element to an adjacent field
-move :: (Monad m, TileRepr t) => t -> Coord -> LevelTrans m
-move (toTile -> t) dest = do
-  walkable' <- use $ isWalkable dest
-  if walkable'
-    then coordOf t .= dest
-    else throwError $ PathBlocked t dest
+move :: TileRepr t => t -> Coord -> LevelTrans
+move (toTile -> t) dest level =
+  if isWalkable dest level
+  then return $ level & coordOf t .~ dest
+  else throwError $ PathBlocked t dest
 
 -- | removes the item from the map and places it in the inventory of the actor
-pickup :: Monad m => Actor -> StaticElement -> LevelTrans m
-pickup actor item = do
-  actors . ix (actor ^. Actor.id) %= execState (Actor.pickItem item)
-  deleteFromCoords item
+pickup :: Actor -> StaticElement -> LevelTrans
+pickup actor item =
+  return . deleteFromCoords item . (actors . ix (actor ^. Actor.id) %~ Actor.pickItem item)
 
 -- | removes the mining target and places the actor on that field.
-mine :: Monad m => Actor -> StaticElement -> LevelTrans m
-mine actor block = do
-  blockCoord <- use $ coordOf block
-  deleteFromCoords block
-  staticElements %= M.delete (block ^. StaticElement.id)
-  move actor blockCoord
+mine :: Actor -> StaticElement -> LevelTrans
+mine actor block level =
+    level & deleteFromCoords block
+          & staticElements %~ M.delete (block ^. StaticElement.id)
+          & move actor blockCoords
+  where blockCoords = view (coordOf block) level
 
-failOnMissingItem :: (Monad m) => Actor -> StaticElement -> Coord -> LevelTrans m
-failOnMissingItem actor item oldCoord = do
-  actualCoord <- use $ coordOf item
-  let itemPresent = oldCoord == actualCoord
+
+failOnMissingItem :: Actor -> StaticElement -> Coord -> LevelTrans
+failOnMissingItem actor item oldCoord level = do
   unless itemPresent $ throwError $ ItemMissing actor item oldCoord
+  return level
+  where
+    actualCoord = view (coordOf item) level
+    itemPresent = oldCoord == actualCoord

@@ -4,24 +4,28 @@ module Actor ( Actor (..)
              , charRepr
              , pickItem
              , dropItem
+             , abilities
              ) where
 
 import Prelude hiding(id)
 
-import Control.Lens((%=),(^.))
+import Control.Lens.Operators
 import Control.Lens.TH
-import Control.Monad.State
+
+import qualified Data.Set as Set
+
 import Types
 import qualified StaticElement as S
 
-data Actor = Actor { _id :: Identifier
+data Actor = Actor { _id :: Identifier Actor
                    , _charRepr :: Char
-                   , _inventory :: [Identifier]
+                   , _inventory :: [Identifier S.StaticElement]
+                   , _abilities :: Set.Set TaskType
                    } deriving Show
 makeLenses ''Actor
 
-pickItem :: MonadState Actor m => S.StaticElement -> m ()
-pickItem item = inventory %= (item ^. S.id :)
+pickItem :: S.StaticElement -> Actor -> Actor
+pickItem item actor = actor & inventory %~ (item ^. S.id :)
 
-dropItem :: MonadState Actor m => Identifier -> m ()
+dropItem :: Identifier S.StaticElement -> Actor -> Actor
 dropItem = undefined
