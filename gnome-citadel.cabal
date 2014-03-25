@@ -45,7 +45,7 @@ library
 
 test-suite specs
   type:                exitcode-stdio-1.0
-  ghc-options:         -Wall -Werror
+  ghc-options:         -Wall
   hs-source-dirs:      test
   main-is:             Spec.hs
   build-depends:       base ==4.*,
