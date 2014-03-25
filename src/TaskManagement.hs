@@ -12,6 +12,7 @@ module TaskManagement ( TaskManager
                       , bestForTheJob
                       , assignTasks
                       , assignTo
+                      , isAssignedTo
                       ) where
 
 import Control.Lens(zoom,contains)
@@ -21,7 +22,7 @@ import Control.Monad.State
 import Control.Applicative
 
 import Data.Default
-import Data.Maybe(listToMaybe)
+import Data.Maybe(listToMaybe, isJust)
 import Data.List(sortBy)
 import Data.Ord(comparing)
 import qualified Data.Set as Set
@@ -70,9 +71,19 @@ taskManager :: TaskManager
 taskManager = TaskManager { _inactive       = def
                           , _active         = def
                           , _taskAssignment = def
-                          , _reachableBy    = error "TaskManager.reachableBy undefined"
+                          , _reachableBy    = isReachableBy
                           , _nextFreeId     = def
                           }
+
+isReachableBy :: Level -> Task -> Actor -> Bool
+isReachableBy lvl task actor = isJust maybePath
+  where  actorCoord = lvl ^. coordOf actor
+         targetCoord = task ^. target
+         maybePath = findArea actorCoord destCoords lvl
+         destCoords = if isWalkable targetCoord lvl
+                      then [targetCoord]
+                      else filter (`isWalkable` lvl) (neighbors2d targetCoord)
+
 
 addTaskE :: (Identifier Task -> Either e Task) -> TaskManager -> Either e TaskManager
 addTaskE t tm = let (task,tm') = flip runState tm $ t <$> zoom nextFreeId freshId
@@ -90,7 +101,7 @@ addTask t tm = flip execState tm $ do
 canBeDoneBy :: Task -> Actor -> Level -> TaskManager -> Bool
 canBeDoneBy task actor lvl tm = hasAbility && not busy && reachable
   where
-    busy       = M.notMember (actor ^. Actor.id) (tm ^. taskAssignment)
+    busy       = M.member (actor ^. Actor.id) (tm ^. taskAssignment)
     hasAbility = actor ^. Actor.abilities . contains (task ^. taskType)
     reachable  = _reachableBy tm lvl task actor
 
@@ -126,3 +137,6 @@ assignTo task actor lvl (cmdScheduler, tm) = (cmdScheduler', tm')
              & active         %~ Set.insert task
              & taskAssignment %~ M.insert (actor ^. Actor.id) (task ^. Task.id)
     cmdScheduler' = Scheduler.addCommand (Task._command task actor lvl) cmdScheduler
+
+isAssignedTo :: Task -> Actor -> TaskManager -> Bool
+isAssignedTo t a tm = M.lookup (a ^. Actor.id) (tm ^. taskAssignment) == Just (t ^. Task.id)
