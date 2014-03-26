@@ -1,7 +1,5 @@
 module TaskManagerSpec(main, spec) where
 
-import Control.Lens.Operators
--- import Control.Monad.State
 import Control.Monad.Error
 
 import Counter
@@ -44,21 +42,18 @@ spec = describe "The TaskManager" $ do
       pending
 
   context "when adding tasks" $ do
+    let taskManagerWithTask = addTask task taskManager
+        (cmdSchedAssigned, taskManagerAssigned) =
+          assignTasks lvl (S.empty, taskManagerWithTask)
+
     it "hasTask returns true only for the added task"
       pending
 
     it "gets assigned to a dwarf" $ do
-      let tm = taskManager & addTask task
-          cmdSched = S.empty
-          (_, tm') = assignTasks lvl (cmdSched, tm)
-          dwarf = findDwarf lvl
-      isAssignedTo task dwarf tm' `shouldBe` True
+      let dwarf = findDwarf lvl
+      taskManagerAssigned `shouldSatisfy` isAssignedTo task dwarf
 
     it "gets assigned to a dwarf and executed" $ do
-      let tm = taskManager & addTask task
-          cmdSched = S.empty
-          (cmdSched', tm') = assignTasks lvl (cmdSched, tm)
-
       e <- runErrorT $ gameStepShouldChangeLevelTo [ "## "
                                                    , "@# "
                                                    , "   "
@@ -73,7 +68,7 @@ spec = describe "The TaskManager" $ do
                                                    , " # "
                                                    , "   "
                                                    ]
-                     $ (lvl, cmdSched', tm')
+                     $ (lvl, cmdSchedAssigned, taskManagerAssigned)
       case e of
         Left e' -> expectationFailure $ show e'
         Right _ -> return ()

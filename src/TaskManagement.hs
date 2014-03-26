@@ -63,6 +63,13 @@ data TaskManager = TaskManager { _inactive :: Set.Set Task
                                }
 makeLenses ''TaskManager
 
+instance Show TaskManager where
+  show (TaskManager inactiv activ _ assignments) =
+    "TaskManager { _inactive = " ++ show inactiv ++ ", "
+      ++ "_active = " ++ show activ ++ ", "
+      ++ "_reachableBy = undefined" ++ ", "
+      ++ "_taskAssignment = " ++ show assignments ++ "}"
+
 taskManager :: TaskManager
 taskManager = TaskManager { _inactive       = def
                           , _active         = def
