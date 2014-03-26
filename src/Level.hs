@@ -17,6 +17,7 @@ module Level ( Level (..)
              , findActor
              , findStaticElement
              , isWalkable
+             , inBounds
              , isReachable
              , deleteFromCoords
 
@@ -25,7 +26,7 @@ module Level ( Level (..)
              , module Coords
              ) where
 
-import Control.Lens (ix, lens, Lens', to)
+import Control.Lens (ix, lens, Lens', to, view)
 import Control.Lens.Operators
 import Control.Lens.TH
 import Control.Applicative
@@ -138,6 +139,10 @@ coordOf tile = lens getter setter
 
 isWalkable :: Coord -> Level -> Bool
 isWalkable c lvl = _walkable lvl lvl c
+
+inBounds :: Coord -> Level -> Bool
+inBounds (Coord x y _) lvl = x `elem` [0..mx] && y `elem` [0..my]
+  where (mx,my) = view bounds lvl
 
 -- | searches a path from one coordinate in a level to another. It
 -- uses the walkable heuristik to find a suitable path.
