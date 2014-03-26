@@ -1,6 +1,7 @@
 module TaskManagerSpec(main, spec) where
 
 import Control.Monad.Error
+import Control.Lens (_1)
 
 import Counter
 import Level
@@ -35,7 +36,7 @@ spec = describe "The TaskManager" $ do
         executeGameStep' >=> mapLevel (levelShouldBe s)
 
       mapLevel :: Functor m => (Level -> m Level) -> TaskManagerState -> m TaskManagerState
-      mapLevel f (l, c, t) = fmap (\l' -> (l', c, t)) (f l)
+      mapLevel = _1
 
   context "asking for a task" $
     it "should return nothing if the task cannot be found"
