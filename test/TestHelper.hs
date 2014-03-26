@@ -7,7 +7,7 @@ module TestHelper ( createLevel
                   , levelShouldBe
                   ) where
 
-import Control.Lens((^.),(.~),(&))
+import Control.Lens((^.),(.~),(&), view)
 import Control.Monad.Error
 
 import Test.Hspec(shouldBe)
@@ -26,11 +26,12 @@ import Tile
 import TestTiles
 
 createLevel :: String -> Level
-createLevel lvlString =
-  let (lvl,_) = fromString levelBuilder lvlString def
-  in lvl & walkable .~ (\lvl' coord -> not $ contains '#' (lvl' ^. at coord))
+createLevel lvlString = lvl & walkable .~ walkableFunction
   where
+    lvl = fst $ fromString levelBuilder lvlString def
     contains x = isJust . find ((x ==) . render)
+    walkableFunction level coord = (not . contains '#' . view (at coord) $ level)
+                                   && inBounds coord level
 
 levelBuilder :: TileBuilder
 levelBuilder ident char =
