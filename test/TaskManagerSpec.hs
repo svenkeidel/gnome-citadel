@@ -12,6 +12,7 @@ import qualified Level.Scheduler as S
 import Level.Transformation
 
 import TestHelper
+import HspecHelper
 import Test.Hspec
 
 type TaskManagerState = (Level, S.CommandScheduler, TaskManager)

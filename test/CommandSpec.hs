@@ -8,6 +8,7 @@ import Control.Monad.Error
 
 import Test.Hspec
 import TestHelper
+import HspecHelper
 
 import Level
 import Level.Transformation

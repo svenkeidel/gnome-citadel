@@ -1,17 +1,12 @@
-{-# LANGUAGE RankNTypes #-}
 module TestHelper ( createLevel
                   , findDwarf
                   , findDwarfByCoord
                   , findWall
                   , isRight
                   , isLeft
-                  , levelShouldBe
                   ) where
 
 import Control.Lens.Operators
-import Control.Monad.Error
-
-import Test.Hspec(shouldBe)
 
 import Data.List(find)
 import Data.Maybe(isJust)
@@ -20,7 +15,6 @@ import Data.Default
 import Actor(Actor)
 import Counter
 import Level
-import Level.Transformation (LevelError)
 import Renderable
 import StaticElement(StaticElement)
 import Tile
@@ -59,8 +53,3 @@ isRight _         = False
 
 isLeft :: Either a b -> Bool
 isLeft = not . isRight
-
-levelShouldBe :: [String] -> Level -> ErrorT LevelError IO Level
-levelShouldBe s lvl = do
-  lift $ show lvl `shouldBe` unlines s
-  return lvl

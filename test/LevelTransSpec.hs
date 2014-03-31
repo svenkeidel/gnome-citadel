@@ -9,6 +9,7 @@ import Test.Hspec
 import Level
 import Level.Transformation
 import TestHelper
+import HspecHelper
 
 main :: IO ()
 main = hspec spec
