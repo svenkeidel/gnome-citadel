@@ -1,7 +1,5 @@
 module LevelSpec(main, spec) where
 
-import Control.Lens ((^.))
-
 import Test.Hspec
 
 import Level
@@ -17,14 +15,14 @@ spec = describe "A Level" $ do
   let levelString = unlines
         [ "###"
         , " ##"
-        , "@ #"
+        , "m #"
         ]
       level = createLevel levelString
-      at' c = head $ level ^. at (from2d c)
+      at' c = head $ at (from2d c) level
 
   it "can be accessed via coordinates" $ do
     render (at' (1,1)) `shouldBe` '#'
-    render (at' (0,2)) `shouldBe` '@'
+    render (at' (0,2)) `shouldBe` 'm'
     render (at' (2,0)) `shouldBe` '#'
     render (at' (0,1)) `shouldBe` ' '
     render (at' (1,2)) `shouldBe` ' '

@@ -1,6 +1,6 @@
 {-# LANGUAGE TemplateHaskell, FlexibleContexts, RankNTypes #-}
 module TaskManagement ( TaskManager
-                      , taskManager
+                      , empty
                       , reachableBy
                       , active
                       , inactive
@@ -70,12 +70,12 @@ instance Show TaskManager where
       ++ "_reachableBy = undefined" ++ ", "
       ++ "_taskAssignment = " ++ show assignments ++ "}"
 
-taskManager :: TaskManager
-taskManager = TaskManager { _inactive       = def
-                          , _active         = def
-                          , _taskAssignment = def
-                          , _reachableBy    = isReachableBy
-                          }
+empty :: TaskManager
+empty = TaskManager { _inactive       = def
+                    , _active         = def
+                    , _taskAssignment = def
+                    , _reachableBy    = isReachableBy
+                    }
 
 isReachableBy :: Level -> Task -> Actor -> Bool
 isReachableBy lvl task actor = isJust maybePath

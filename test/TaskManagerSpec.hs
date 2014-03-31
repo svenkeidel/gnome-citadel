@@ -22,12 +22,7 @@ main = hspec spec
 
 spec :: Spec
 spec = describe "The TaskManager" $ do
-  let lvl = createLevel $ unlines [ "## "
-                                  , " # "
-                                  , "@  "
-                                  ]
-      task = LevelTask.mine (findWall (1,0) lvl) lvl (Identifier 1)
-
+  let
       executeGameStep' :: TaskManagerState -> TaskManagerStateE
       executeGameStep' (lvl', sched, tm) = ErrorT . return $ fmap (\(a,b) -> (a,b,tm)) (S.executeGameStep (lvl',sched))
 
@@ -38,34 +33,73 @@ spec = describe "The TaskManager" $ do
       mapLevel :: Functor m => (Level -> m Level) -> TaskManagerState -> m TaskManagerState
       mapLevel = _1
 
-  context "asking for a task" $
-    it "should return nothing if the task cannot be found"
-      pending
+      bootstrap lvl' task' = let taskManagerWithTask = addTask task' empty
+                             in assignTasks lvl' (S.empty, taskManagerWithTask)
 
   context "when adding tasks" $ do
-    let taskManagerWithTask = addTask task taskManager
-        (cmdSchedAssigned, taskManagerAssigned) =
-          assignTasks lvl (S.empty, taskManagerWithTask)
 
-    it "hasTask returns true only for the added task"
-      pending
+    it "cannot be assigned to a incompatible dwarf" $ do
+      let lvl = createLevel $ unlines [ "## "
+                                      , " # "
+                                      , "c  "
+                                      ]
+          (_, taskManagerAssigned) = bootstrap lvl task
+          task = LevelTask.mine (findWall (1,0) lvl) lvl (Identifier 1)
+          dwarf = findDwarf 'c' lvl
+      taskManagerAssigned `shouldSatisfy` not . isAssignedTo task dwarf
+
+    it "cannot be assigned if dwarf cannot reach task location" $ do
+      let lvl = createLevel $ unlines [ " # "
+                                      , "   "
+                                      , "###"
+                                      , "m  "
+                                      ]
+          (_, taskManagerAssigned) = bootstrap lvl task
+          task = LevelTask.mine (findWall (1,0) lvl) lvl (Identifier 1)
+          dwarf = findDwarf 'm' lvl
+      taskManagerAssigned `shouldSatisfy` not . isAssignedTo task dwarf
+
+    it "gets assigned to the nearest dwarf" $ do
+      let lvl = createLevel $ unlines [ " # "
+                                      , "  m"
+                                      , "   "
+                                      , "m  "
+                                      ]
+          (_, taskManagerAssigned) = bootstrap lvl task
+          task = LevelTask.mine (findWall (1,0) lvl) lvl (Identifier 1)
+          dwarfLowerLeft = findDwarfByCoord (from2d (0,3)) lvl
+          dwarfUpperRight = findDwarfByCoord (from2d (2,1)) lvl
+      taskManagerAssigned `shouldSatisfy` isAssignedTo task dwarfUpperRight
+      taskManagerAssigned `shouldSatisfy` not . isAssignedTo task dwarfLowerLeft
 
     it "gets assigned to a dwarf" $ do
-      let dwarf = findDwarf lvl
+      let lvl = createLevel $ unlines [ "## "
+                                      , " # "
+                                      , "m  "
+                                      ]
+          task = LevelTask.mine (findWall (1,0) lvl) lvl (Identifier 1)
+          (_, taskManagerAssigned) = bootstrap lvl task
+          dwarf = findDwarf 'm' lvl
       taskManagerAssigned `shouldSatisfy` isAssignedTo task dwarf
 
     it "gets assigned to a dwarf and executed" $ do
+      let lvl = createLevel $ unlines [ "## "
+                                      , " # "
+                                      , "m  "
+                                      ]
+          task = LevelTask.mine (findWall (1,0) lvl) lvl (Identifier 1)
+          (cmdSchedAssigned, taskManagerAssigned) = bootstrap lvl task
       e <- runErrorT $ gameStepShouldChangeLevelTo [ "## "
-                                                   , "@# "
+                                                   , "m# "
                                                    , "   "
                                                    ]
                        >=>
-                       gameStepShouldChangeLevelTo [ "#@ "
+                       gameStepShouldChangeLevelTo [ "#m "
                                                    , " # "
                                                    , "   "
                                                    ]
                        >=>
-                       gameStepShouldChangeLevelTo [ "#@ "
+                       gameStepShouldChangeLevelTo [ "#m "
                                                    , " # "
                                                    , "   "
                                                    ]

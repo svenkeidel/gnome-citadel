@@ -27,9 +27,9 @@ spec = describe "An Execution" $ do
   let level = createLevel $
               unlines [ "## "
                       , " # "
-                      , "@  "
+                      , "m  "
                       ]
-      dwarf' = findDwarf level
+      dwarf' = findDwarf 'm' level
 
       executeGameStep' :: SchedulerState -> SchedulerStateE
       executeGameStep' = ErrorT . return . CS.executeGameStep
@@ -52,20 +52,20 @@ spec = describe "An Execution" $ do
         >=>
         gameStepShouldChangeLevelTo [ "## "
                                     , " # "
-                                    , " @ "
+                                    , " m "
                                     ]
         >=>
         gameStepShouldChangeLevelTo [ "## "
-                                    , " #@"
+                                    , " #m"
                                     , "   "
                                     ]
         >=>
-        gameStepShouldChangeLevelTo [ "##@"
+        gameStepShouldChangeLevelTo [ "##m"
                                     , " # "
                                     , "   "
                                     ]
         >=>
-        gameStepShouldChangeLevelTo [ "##@"
+        gameStepShouldChangeLevelTo [ "##m"
                                     , " # "
                                     , "   "
                                     ]
@@ -76,12 +76,12 @@ spec = describe "An Execution" $ do
       e <- runErrorT $
         addCommand' (approach (from2d (1,0)) dwarf') >=>
         gameStepShouldChangeLevelTo [ "## "
-                                    , "@# "
+                                    , "m# "
                                     , "   "
                                     ]
         >=>
         gameStepShouldChangeLevelTo [ "## "
-                                    , "@# "
+                                    , "m# "
                                     , "   "
                                     ]
          $ (level, CS.empty)
@@ -94,16 +94,16 @@ spec = describe "An Execution" $ do
       e <- runErrorT $
         addCommand' (LC.mine wall dwarf') >=>
         gameStepShouldChangeLevelTo [ "## "
-                                    , "@# "
+                                    , "m# "
                                     , "   "
                                     ]
         >=>
-        gameStepShouldChangeLevelTo [ "#@ "
+        gameStepShouldChangeLevelTo [ "#m "
                                     , " # "
                                     , "   "
                                     ]
         >=>
-        gameStepShouldChangeLevelTo [ "#@ "
+        gameStepShouldChangeLevelTo [ "#m "
                                     , " # "
                                     , "   "
                                     ]

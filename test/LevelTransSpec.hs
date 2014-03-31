@@ -18,9 +18,9 @@ spec = describe "A Level Transformation" $ do
   let level = createLevel $
               unlines [ "## "
                       , " # "
-                      , "@  "
+                      , "m  "
                       ]
-      dwarf' = findDwarf level
+      dwarf' = findDwarf 'm' level
       wall'  = findWall (1, 0) level
       move' coord = ErrorT . return . move dwarf' (from2d coord)
       mine' coord = ErrorT . return . mine dwarf' (findWall coord level)
@@ -33,11 +33,11 @@ spec = describe "A Level Transformation" $ do
             $  move' (1,2)
            >=> levelShouldBe [ "## "
                              , " # "
-                             , " @ "
+                             , " m "
                              ]
            >=> move' (0,1)
            >=> levelShouldBe [ "## "
-                             , "@# "
+                             , "m# "
                              , "   "
                              ]
             $ level
@@ -52,12 +52,12 @@ spec = describe "A Level Transformation" $ do
       e <- runErrorT
             $  mine' (1,1)
            >=> levelShouldBe [ "## "
-                             , " @ "
+                             , " m "
                              , "   "
                              ]
 
            >=> mine' (0,0)
-           >=> levelShouldBe [ "@# "
+           >=> levelShouldBe [ "m# "
                              , "   "
                              , "   "
                              ]
@@ -72,4 +72,3 @@ spec = describe "A Level Transformation" $ do
     it "works with alternative" $ do
       e <- runErrorT $ failOnMissingItem' (1, 0) level
       e `shouldSatisfy` isRight
-
