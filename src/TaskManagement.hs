@@ -139,3 +139,7 @@ assignTo task actor lvl (cmdScheduler, tm) = (cmdScheduler', tm')
 
 isAssignedTo :: Task -> Actor -> TaskManager -> Bool
 isAssignedTo t a tm = M.lookup (a ^. Actor.id) (tm ^. taskAssignment) == Just (t ^. Task.id)
+
+
+executeGameStep :: (Level, CommandScheduler, TaskManager) -> (Level, CommandScheduler, TaskManager)
+executeGameStep

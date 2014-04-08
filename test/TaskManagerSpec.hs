@@ -1,19 +1,21 @@
 module TaskManagerSpec(main, spec) where
 
-import Control.Monad.Error
-import Control.Lens (_1)
+import           Control.Lens.Operators
+import           Control.Lens (_1)
+import           Control.Lens.At (contains)
+import           Control.Monad.Error
 
-import Counter
-import Level
-import TaskManagement
+import           Counter
+import           Level
+import           TaskManagement
 
 import qualified Level.Task as LevelTask
 import qualified Level.Scheduler as S
-import Level.Transformation
+import           Level.Transformation
 
-import TestHelper
-import HspecHelper
-import Test.Hspec
+import           TestHelper
+import           HspecHelper
+import           Test.Hspec
 
 type TaskManagerState = (Level, S.CommandScheduler, TaskManager)
 type TaskManagerStateE = ErrorT LevelError IO TaskManagerState
@@ -108,3 +110,20 @@ spec = describe "The TaskManager" $ do
       case e of
         Left e' -> expectationFailure $ show e'
         Right _ -> return ()
+
+    it "is marked as completed after successful execution" $ do
+      let lvl = createLevel $ unlines [ "## "
+                                      , " # "
+                                      , "m  "
+                                      ]
+          task = LevelTask.mine (findWall (1,0) lvl) lvl (Identifier 1)
+          (cmdSchedAssigned, taskManagerAssigned) = bootstrap lvl task
+
+      e <- runErrorT (foldr1 (>=>) (replicate 10 executeGameStep') (lvl,cmdSchedAssigned, taskManagerAssigned))
+
+
+      case e of
+        Left e' -> expectationFailure $ show e'
+        Right (_,_,tm') -> do
+          tm' ^. inactive . contains task `shouldBe` False
+          tm' ^. active . contains task `shouldBe` False

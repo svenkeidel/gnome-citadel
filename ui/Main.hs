@@ -16,7 +16,7 @@ main :: IO ()
 main = do
   vty <- mkVty
   let lvlInit = createLevel $ unlines ["  ####  "
-                                      ,"  ####  "
+                                      ,"  ######"
                                       ,"        "
                                       ,"  m  c  "
                                       ]
