@@ -4,7 +4,6 @@ import Graphics.Vty
 import TestHelper
 import Level
 import Counter
-import qualified Level.Scheduler as S
 import Level.Transformation
 import TaskManagement
 import qualified Level.Task as LevelTask

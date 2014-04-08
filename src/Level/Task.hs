@@ -14,6 +14,6 @@ mine s lvl i = Task
              { _id = i
              , _target = lvl ^. coordOf s
              , _taskType = Mine
-             , _command = Command.mine s
+             , _command = assert False undefined --Command.mine s
              , _precondition = \lvl' -> isReachable (lvl' ^. coordOf s) lvl'
              }

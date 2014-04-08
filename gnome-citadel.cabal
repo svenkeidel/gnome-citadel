@@ -19,7 +19,6 @@ library
                        Level,
                        Level.Transformation,
                        Level.Command,
-                       Level.Scheduler,
                        Level.Task,
                        Actor,
                        Counter,

@@ -1,5 +1,6 @@
 {-# LANGUAGE TemplateHaskell #-}
 module Task ( Task (..)
+            , TaskStatus(..)
             , id
             , target
             , taskType
@@ -15,15 +16,20 @@ import Data.Ord(comparing)
 
 import Counter
 import Coords
-import Level.Command(Command)
 import Actor(Actor, TaskType)
+import Unfold
 
 import Level
+
+data TaskStatus
+  = CannotBeCompleted String
+  | Reschedule
+  | InProgress Level
 
 data Task = Task { _id :: Identifier Task
                  , _target :: Coord
                  , _taskType :: TaskType
-                 , _command :: Actor -> Level -> Command
+                 , _command :: Actor -> Level -> Unfold (Level -> TaskStatus)
                  , _precondition :: Level -> Bool
                  }
 makeLenses ''Task

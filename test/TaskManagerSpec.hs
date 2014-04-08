@@ -10,7 +10,6 @@ import           Level
 import           TaskManagement
 
 import qualified Level.Task as LevelTask
-import qualified Level.Scheduler as S
 import           Level.Transformation
 
 import           TestHelper

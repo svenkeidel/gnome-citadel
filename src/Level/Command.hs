@@ -3,7 +3,6 @@ module Level.Command where
 
 import Control.Lens ((^.))
 import Control.Lens.Cons (_tail)
-import Control.Monad.Error
 
 import Data.Monoid
 
@@ -38,7 +37,7 @@ approach :: Coord -> Actor -> Level -> Command
 approach dest actor lvl =
   case maybePath of
     Just path -> DF.foldMap (return . T.move actor) (path ^. pathCoords . _tail)
-    Nothing   -> return (const . throwError $ PathNotFound fromCoord dest)
+    Nothing   -> return (const . LevelError $ PathNotFound fromCoord dest)
   where
     fromCoord  = lvl ^. coordOf actor
     maybePath  = findArea fromCoord destCoords lvl

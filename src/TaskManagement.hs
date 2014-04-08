@@ -32,8 +32,8 @@ import Counter
 import Task
 import Level hiding (actors, isReachable)
 import qualified Level
-import Level.Scheduler(CommandScheduler)
-import qualified Level.Scheduler as Scheduler
+import Unfold(Unfold,Step(..))
+import qualified Unfold as U
 
 -- | Lifecycle of a task
 --
@@ -57,9 +57,10 @@ import qualified Level.Scheduler as Scheduler
 --                            +---------------+
 -- @
 data TaskManager = TaskManager { _inactive :: Set.Set Task
-                               , _active :: Set.Set Task
+                               , _active :: [Task]
                                , _reachableBy :: Level -> Task -> Actor -> Bool
                                , _taskAssignment :: M.Map (Identifier Actor) (Identifier Task)
+
                                }
 makeLenses ''TaskManager
 
@@ -118,28 +119,38 @@ bestForTheJob task actors lvl tm =
 
 -- | Looks through the list of inactive tasks and tries to
 -- automatically assign those to idle dwarves.
-assignTasks :: Level -> (CommandScheduler, TaskManager) -> (CommandScheduler, TaskManager)
-assignTasks lvl (cmdScheduler0, tm0) = F.foldl go (cmdScheduler0, tm0) (tm0 ^. inactive)
+assignTasks :: Level -> TaskManager -> TaskManager
+assignTasks lvl tm0 = F.foldl go tm0 (tm0 ^. inactive)
   where
-    go :: (CommandScheduler, TaskManager) -> Task -> (CommandScheduler, TaskManager)
-    go (cmdScheduler, tm) task =
+    go :: TaskManager -> Task -> TaskManager
+    go tm task =
       case bestForTheJob task (M.elems $ lvl ^. Level.actors) lvl tm of
-        Just actor -> assignTo task actor lvl (cmdScheduler, tm)
-        Nothing    -> (cmdScheduler, tm)
+        Just actor -> assignTo task actor lvl tm
+        Nothing    -> tm
 
 -- | Assign the given task to the given actor and add the appropriate
 -- command to the command scheduler.
-assignTo :: Task -> Actor -> Level -> (CommandScheduler, TaskManager) -> (CommandScheduler, TaskManager)
-assignTo task actor lvl (cmdScheduler, tm) = (cmdScheduler', tm')
-  where
-    tm' = tm & inactive       %~ Set.delete task
-             & active         %~ Set.insert task
-             & taskAssignment %~ M.insert (actor ^. Actor.id) (task ^. Task.id)
-    cmdScheduler' = Scheduler.addCommand (Task._command task actor lvl) cmdScheduler
+assignTo :: Task -> Actor -> Level -> TaskManager -> TaskManager
+assignTo task actor lvl
+  = (inactive       %~ Set.delete task)
+  . (active         %~ (task:))
+  . (taskAssignment %~ M.insert (actor ^. Actor.id) (task ^. Task.id))
 
 isAssignedTo :: Task -> Actor -> TaskManager -> Bool
 isAssignedTo t a tm = M.lookup (a ^. Actor.id) (tm ^. taskAssignment) == Just (t ^. Task.id)
 
+executeGameStep :: (Level, TaskManager) -> (Level, TaskManager)
+executeGameStep (lvl, tm) = foldr go (lvl,tm & active .~ []) (tm ^. active)
+  where
+    go :: Task -> (Level,TaskManager) -> (Level,TaskManager)
+    go task (lvl,tm) =
+      case U.next task of
+        Done              -> (lvl, deleteTask task tm)
+        Yield trans task' ->
+          case trans lvl of
+            CannotBeCompleted _ -> (lvl, deleteTask task tm)
+            Reschedule          -> (lvl, addTask task' $ deleteTask task tm)
+            InProgress lvl'     -> (lvl, tm & active %~ (task' :))
 
-executeGameStep :: (Level, CommandScheduler, TaskManager) -> (Level, CommandScheduler, TaskManager)
-executeGameStep
+    -- task are dropped before fold, so deleting a task is just id
+    deleteTask task tm = tm

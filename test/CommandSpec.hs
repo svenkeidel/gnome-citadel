@@ -14,7 +14,6 @@ import Level
 import Level.Transformation
 import Level.Command
 import qualified Level.Command as LC
-import qualified Level.Scheduler as CS
 
 type SchedulerState = (Level,CS.CommandScheduler)
 type SchedulerStateE = ErrorT LevelError IO SchedulerState
