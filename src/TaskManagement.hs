@@ -1,5 +1,6 @@
 {-# LANGUAGE TemplateHaskell, FlexibleContexts, RankNTypes #-}
 module TaskManagement ( TaskManager
+                      , AbortedTask
                       , empty
                       , reachableBy
                       , active
@@ -12,6 +13,7 @@ module TaskManagement ( TaskManager
                       , assignTasks
                       , assignTo
                       , isAssignedTo
+                      , executeGameStep
                       ) where
 
 import Control.Lens(contains)
@@ -32,8 +34,7 @@ import Counter
 import Task
 import Level hiding (actors, isReachable)
 import qualified Level
-import Unfold(Unfold,Step(..))
-import qualified Unfold as U
+import Unfold
 
 -- | Lifecycle of a task
 --
@@ -57,7 +58,7 @@ import qualified Unfold as U
 --                            +---------------+
 -- @
 data TaskManager = TaskManager { _inactive :: Set.Set Task
-                               , _active :: [Task]
+                               , _active :: [ActiveTask]
                                , _reachableBy :: Level -> Task -> Actor -> Bool
                                , _taskAssignment :: M.Map (Identifier Actor) (Identifier Task)
 
@@ -133,24 +134,32 @@ assignTasks lvl tm0 = F.foldl go tm0 (tm0 ^. inactive)
 assignTo :: Task -> Actor -> Level -> TaskManager -> TaskManager
 assignTo task actor lvl
   = (inactive       %~ Set.delete task)
-  . (active         %~ (task:))
+  . (active         %~ insert (ActiveTask task $ _command task actor lvl))
   . (taskAssignment %~ M.insert (actor ^. Actor.id) (task ^. Task.id))
+  where
+    insert = (:)
 
 isAssignedTo :: Task -> Actor -> TaskManager -> Bool
 isAssignedTo t a tm = M.lookup (a ^. Actor.id) (tm ^. taskAssignment) == Just (t ^. Task.id)
 
-executeGameStep :: (Level, TaskManager) -> (Level, TaskManager)
-executeGameStep (lvl, tm) = foldr go (lvl,tm & active .~ []) (tm ^. active)
-  where
-    go :: Task -> (Level,TaskManager) -> (Level,TaskManager)
-    go task (lvl,tm) =
-      case U.next task of
-        Done              -> (lvl, deleteTask task tm)
-        Yield trans task' ->
-          case trans lvl of
-            CannotBeCompleted _ -> (lvl, deleteTask task tm)
-            Reschedule          -> (lvl, addTask task' $ deleteTask task tm)
-            InProgress lvl'     -> (lvl, tm & active %~ (task' :))
+data AbortedTask = AbortedTask Task String
+    deriving (Show)
 
-    -- task are dropped before fold, so deleting a task is just id
-    deleteTask task tm = tm
+executeGameStep :: Level -> TaskManager -> ([AbortedTask], Level, TaskManager)
+executeGameStep lvl0 tm0 = foldr go ([],lvl0,tm0 & active .~ []) (tm0 ^. active)
+  where
+    go (ActiveTask task state) (err,lvl,tm) =
+      case next state of
+        Done               -> (err,lvl, tm)
+        Yield trans state' ->
+          case trans lvl of
+            -- simply drop the task.
+            CannotBeCompleted s -> (AbortedTask task s:err,lvl, tm)
+
+            -- drop the current state and readd the task as inactive.
+            Reschedule          -> (err,lvl, addTask task tm)
+
+            -- update the task state in the manager and the modified level.
+            InProgress lvl'     -> (err,lvl', tm & active %~ insert (ActiveTask task state'))
+
+    insert = (:)

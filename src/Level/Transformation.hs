@@ -16,12 +16,7 @@ import StaticElement (StaticElement)
 import qualified Actor
 import qualified StaticElement
 
-type LevelTrans = Level -> Status
-
-data Status
-  = LevelError LevelError
-  | Completed
-  | InProgress Level
+type LevelTrans = Level -> (Either LevelError Level)
 
 data LevelError
   = PathBlocked Tile Coord
@@ -47,13 +42,13 @@ instance Show LevelError where
 move :: TileRepr t => t -> Coord -> LevelTrans
 move (toTile -> t) dest level =
   if isWalkable dest level
-  then InProgress $ level & coordOf t .~ dest
-  else LevelError $ PathBlocked t dest
+  then return $ level & coordOf t .~ dest
+  else throwError $ PathBlocked t dest
 
 -- | removes the item from the map and places it in the inventory of the actor
 pickup :: Actor -> StaticElement -> LevelTrans
 pickup actor item =
-  InProgress . deleteFromCoords item . (actors . ix (actor ^. Actor.id) %~ Actor.pickItem item)
+  return . deleteFromCoords item . (actors . ix (actor ^. Actor.id) %~ Actor.pickItem item)
 
 -- | removes the mining target and places the actor on that field.
 mine :: Actor -> StaticElement -> LevelTrans
@@ -67,8 +62,8 @@ mine actor block level =
 failOnMissingItem :: Actor -> StaticElement -> Coord -> LevelTrans
 failOnMissingItem actor item oldCoord level =
   if itemPresent
-     then InProgress level
-     else LevelError $ ItemMissing actor item oldCoord
+     then return level
+     else throwError $ ItemMissing actor item oldCoord
   where
     actualCoord = view (coordOf item) level
     itemPresent = oldCoord == actualCoord

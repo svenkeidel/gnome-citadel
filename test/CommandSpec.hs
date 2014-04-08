@@ -1,8 +1,7 @@
 {-# LANGUAGE ScopedTypeVariables #-}
 module CommandSpec(main, spec) where
 
-import Control.Lens (_1,_2)
-import Control.Lens.Operators
+import Control.Lens (_1)
 import Control.Monad.State
 import Control.Monad.Error
 
@@ -14,8 +13,9 @@ import Level
 import Level.Transformation
 import Level.Command
 import qualified Level.Command as LC
+import Unfold
 
-type SchedulerState = (Level,CS.CommandScheduler)
+type SchedulerState = (Level,Command)
 type SchedulerStateE = ErrorT LevelError IO SchedulerState
 
 main :: IO ()
@@ -32,7 +32,12 @@ spec = describe "An Execution" $ do
       dwarf' = findDwarf 'm' level
 
       executeGameStep' :: SchedulerState -> SchedulerStateE
-      executeGameStep' = ErrorT . return . CS.executeGameStep
+      executeGameStep' (lvl,com) =
+        case next com of
+          Done             -> return $ (lvl,com)
+          Yield trans com' -> ErrorT $ return $ do
+            lvl' <- trans lvl
+            return (lvl',com')
 
       gameStepShouldChangeLevelTo :: [String] -> SchedulerState -> SchedulerStateE
       gameStepShouldChangeLevelTo expected =
@@ -41,15 +46,14 @@ spec = describe "An Execution" $ do
       mapLevel :: Functor m => (Level -> m Level) -> SchedulerState -> m SchedulerState
       mapLevel = _1
 
-      addCommand' :: (Level -> Command) -> SchedulerState -> SchedulerStateE
-      addCommand' f s@(lvl,_) = return $ s & _2 %~ CS.addCommand (f lvl)
+      noError :: Either LevelError SchedulerState -> Expectation
+      noError (Left l) = expectationFailure (show l)
+      noError (Right _) = return ()
 
   describe "An Approach" $ do
     it "moves an actor in multiple game steps to a destination coordinate" $ do
 
       e <- runErrorT $
-        addCommand' (approach (from2d (2,0)) dwarf')
-        >=>
         gameStepShouldChangeLevelTo [ "## "
                                     , " # "
                                     , " m "
@@ -69,12 +73,12 @@ spec = describe "An Execution" $ do
                                     , " # "
                                     , "   "
                                     ]
-         $ (level, CS.empty)
-      e `shouldSatisfy` isRight
+         $ (level, approach (from2d (2,0)) dwarf' level)
+
+      noError e
 
     it "should approach an adjacent field if the destination is blocked" $ do
       e <- runErrorT $
-        addCommand' (approach (from2d (1,0)) dwarf') >=>
         gameStepShouldChangeLevelTo [ "## "
                                     , "m# "
                                     , "   "
@@ -84,15 +88,14 @@ spec = describe "An Execution" $ do
                                     , "m# "
                                     , "   "
                                     ]
-         $ (level, CS.empty)
+         $ (level, approach (from2d (1,0)) dwarf' level)
 
-      e `shouldSatisfy` isRight
+      noError e
 
   describe "A Mining Command" $
     it "should approach the mining location, to remove the field and place the actor on top" $ do
       let wall = findWall (1,0) level
       e <- runErrorT $
-        addCommand' (LC.mine wall dwarf') >=>
         gameStepShouldChangeLevelTo [ "## "
                                     , "m# "
                                     , "   "
@@ -107,5 +110,6 @@ spec = describe "An Execution" $ do
                                     , " # "
                                     , "   "
                                     ]
-         $ (level, CS.empty)
-      e `shouldSatisfy` isRight
+         $ (level, LC.mine wall dwarf' level)
+
+      noError e

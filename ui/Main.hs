@@ -4,12 +4,11 @@ import Graphics.Vty
 import TestHelper
 import Level
 import Counter
-import Level.Transformation
 import TaskManagement
 import qualified Level.Task as LevelTask
 
-type TaskManagerState = (Level, S.CommandScheduler, TaskManager)
-type TaskManagerStateE = Either LevelError TaskManagerState
+type TaskManagerState = (Level, TaskManager)
+type TaskManagerStateE = ([AbortedTask],Level,TaskManager)
 
 main :: IO ()
 main = do
@@ -20,24 +19,23 @@ main = do
                                       ,"  m  c  "
                                       ]
 
-  eventLoop vty (lvlInit,S.empty,empty)
+  eventLoop vty (lvlInit,empty)
   shutdown vty
 
   where
-    addTask' task (lvl, cs, ts) = let taskManagerWithTask = addTask task ts
-                                      (cs',ts') = assignTasks lvl (cs, taskManagerWithTask)
-                                  in (lvl,cs',ts')
+    addTask' task (lvl, ts) = let taskManagerWithTask = addTask task ts
+                                  ts' = assignTasks lvl taskManagerWithTask
+                              in (lvl,ts')
 
-    onKeyPressed _ c state@(lvl,_,_) =
+    ignoreErrors (_,l,t) = (l,t)
+
+    onKeyPressed _ c state@(lvl,tm) =
       case c of
-           '.' -> return $ executeGameStep' state
-           'm' -> return $ Right $ addTask' (LevelTask.mine (findWall (5,0) lvl) lvl (Identifier 1)) state
-           _   -> return $ Right state
+           '.' -> return $ ignoreErrors $ executeGameStep lvl tm
+           'm' -> return $ addTask' (LevelTask.mine (findWall (5,0) lvl) lvl (Identifier 1)) state
+           _   -> return $ state
 
-    executeGameStep' :: TaskManagerState -> TaskManagerStateE
-    executeGameStep' (lvl', sched, tm) = fmap (\(a,b) -> (a,b,tm)) (S.executeGameStep (lvl',sched))
-
-    eventLoop vty state@(lvl,_,_) = do
+    eventLoop vty state@(lvl,_) = do
       update vty (pic_for_image $ vert_cat $ map (string def_attr) $ lines $ show lvl)
       e <- next_event vty
       case e of
@@ -46,8 +44,6 @@ main = do
             (KASCII 'q') -> return ()
             (KASCII c)   -> do
               state' <- onKeyPressed vty c state
-              case state' of
-                Left _ -> undefined
-                Right s -> eventLoop vty s
-            _            -> eventLoop vty state
-        _         -> eventLoop vty state
+              eventLoop vty state'
+            _ -> eventLoop vty state
+        _ -> eventLoop vty state
