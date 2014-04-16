@@ -48,7 +48,8 @@ executable gnome-citadel
   ghc-options:         -Wall -Werror
   Build-depends:       base ==4.*,
                        gnome-citadel,
-                       vty == 4.7.3
+                       vty == 4.7.3,
+                       lens
   main-is:             Main.hs
 
 test-suite specs

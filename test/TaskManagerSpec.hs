@@ -109,7 +109,7 @@ spec = describe "The TaskManager" $ do
                                                      ]
                        $ (lvl, taskManagerAssigned)
 
-      when (not $ null e) $ expectationFailure $ show e
+      unless (null e) $ expectationFailure $ show e
 
     it "is marked as completed after successful execution" $ do
       let lvl = createLevel $ unlines [ "## "
@@ -122,12 +122,11 @@ spec = describe "The TaskManager" $ do
       ((_,tm'),e) <- runWriterT $
         foldr1 (>=>) (replicate 10 executeGameStep') (lvl,taskManagerAssigned)
 
-      when (not $ null e) $ expectationFailure $ show e
+      unless (null e) $ expectationFailure $ show e
 
       tm' ^. inactive . contains task `shouldBe` False
 
-      -- I couldn't do the lens version. If you can, please fix this.
-      (elem task $ getTask (tm' ^. active)) `shouldBe` False
+      elem task (getTask (tm' ^. active)) `shouldBe` False
 
     where
       getTask = map (\(ActiveTask t _) -> t)

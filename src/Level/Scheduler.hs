@@ -37,6 +37,7 @@ addCommandT c cmdScheduler = do
 
 -- | Applies the upcomming sequence of commands to the level. Lifts
 -- all effects into the base monad of the state transformer.
+
 executeGameStep :: (Level, CommandScheduler) -> Either LevelError (Level, CommandScheduler)
 executeGameStep (lvl, cmdScheduler) = do
   -- Kleisli Arrows (>=>) :: (a -> m b) -> (b -> m c) -> (a -> m c)
