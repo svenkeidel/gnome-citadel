@@ -1,0 +1,5 @@
+* TODO Gnome Citadel
+** TODO actor busy after task execution
+** TODO visualize task manager
+** TODO message/logging area
+** TODO findWall partial / write safe version
