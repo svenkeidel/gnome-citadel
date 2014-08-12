@@ -9,7 +9,6 @@ module Coords ( Coord (Coord)
               , neighbors2d
 
               , SumCoord (..)
-              , sumCoord
               , (|+|)
               ) where
 
@@ -33,7 +32,7 @@ instance Show Coord where
   show (Coord x y z) = show (x,y,z)
 
 newtype SumCoord = SumCoord { getSumCoord :: Coord } deriving Show
-makeIso ''SumCoord
+makeLenses ''SumCoord
 
 instance Monoid SumCoord where
   mempty = SumCoord $ Coord 0 0 0
