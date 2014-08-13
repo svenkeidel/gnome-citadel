@@ -1,6 +1,6 @@
 {-# LANGUAGE TemplateHaskell, FlexibleContexts, RankNTypes #-}
 module TaskManagement ( TaskManager
-                      , AbortedTask
+                      , AbortedTask (AbortedTask)
                       , empty
                       , reachableBy
                       , active
@@ -157,7 +157,7 @@ executeGameStep lvl0 tm0 = foldr go ([],lvl0,tm0 & active .~ []) (tm0 ^. active)
         Yield trans state' ->
           case trans lvl of
             -- simply drop the task.
-            CannotBeCompleted s -> (AbortedTask task s:err,lvl, tm)
+            CannotBeCompleted s -> (AbortedTask task s : err,lvl, tm)
 
             -- drop the current state and readd the task as inactive.
             Reschedule          -> (err,lvl, addTask task tm)

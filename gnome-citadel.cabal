@@ -49,7 +49,8 @@ executable gnome-citadel
   Build-depends:       base ==4.*,
                        gnome-citadel,
                        vty == 4.7.3,
-                       lens
+                       lens,
+                       text
   main-is:             Main.hs
 
 test-suite specs
