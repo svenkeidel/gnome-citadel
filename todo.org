@@ -1,6 +1,11 @@
 * TODO Gnome Citadel
 ** DONE actor busy after task execution
    CLOSED: [2014-08-13 Wed 12:42]
-** TODO visualize task manager
-** TODO message/logging area
-** TODO findWall partial / write safe version
+** DONE findWall partial / write safe version
+   CLOSED: [2014-08-13 Wed 15:07]
+*** BUG marking empty field for mining -> empty list
+** GUI
+*** DONE message/logging area
+    CLOSED: [2014-08-13 Wed 14:10]
+*** DONE visualize task manager
+    CLOSED: [2014-08-13 Wed 15:07]

@@ -149,7 +149,8 @@ data AbortedTask = AbortedTask Task String
     deriving (Show)
 
 executeGameStep :: Level -> TaskManager -> ([AbortedTask], Level, TaskManager)
-executeGameStep lvl0 tm0 = foldr go ([],lvl0,tm0 & active .~ []) (tm0 ^. active)
+executeGameStep lvl0 tm0 = let (aborted,lvl',tm') = foldr go ([],lvl0,tm0 & active .~ []) (tm0 ^. active)
+                           in (aborted, lvl', assignTasks lvl' tm')
   where
     go (ActiveTask task state) (err,lvl,tm) =
       case next state of
