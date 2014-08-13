@@ -31,7 +31,7 @@ main = do
   let lvlInit = createLevel $ unlines ["  ####  "
                                       ,"  ##### "
                                       ,"        "
-                                      ,"  m  c  "
+                                      ,"  m  m  "
                                       ]
 
   eventLoop vty (GameState (0,0) lvlInit empty ["Game started."] def)
