@@ -1,5 +1,6 @@
 * TODO Gnome Citadel
-** TODO actor busy after task execution
+** DONE actor busy after task execution
+   CLOSED: [2014-08-13 Wed 12:42]
 ** TODO visualize task manager
 ** TODO message/logging area
 ** TODO findWall partial / write safe version

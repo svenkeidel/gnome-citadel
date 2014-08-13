@@ -118,6 +118,7 @@ spec = describe "The TaskManager" $ do
                                       ]
           task = LevelTask.mine (findWall (1,0) lvl) lvl (Identifier 1)
           taskManagerAssigned = assignTask' lvl task
+          dwarf = findDwarf 'm' lvl
 
       ((_,tm'),e) <- runWriterT $
         foldr1 (>=>) (replicate 10 executeGameStep') (lvl,taskManagerAssigned)
@@ -127,6 +128,8 @@ spec = describe "The TaskManager" $ do
       tm' ^. inactive . contains task `shouldBe` False
 
       elem task (getTask (tm' ^. active)) `shouldBe` False
+
+      tm' `shouldSatisfy` not . isAssignedTo task dwarf
 
     where
       getTask = map (\(ActiveTask t _) -> t)

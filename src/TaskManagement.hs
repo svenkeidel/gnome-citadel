@@ -139,6 +139,9 @@ assignTo task actor lvl
   where
     insert = (:)
 
+unassignTask :: Task -> TaskManager -> TaskManager
+unassignTask task = taskAssignment %~ M.filter (/= task ^. Task.id)
+
 isAssignedTo :: Task -> Actor -> TaskManager -> Bool
 isAssignedTo t a tm = M.lookup (a ^. Actor.id) (tm ^. taskAssignment) == Just (t ^. Task.id)
 
@@ -150,7 +153,7 @@ executeGameStep lvl0 tm0 = foldr go ([],lvl0,tm0 & active .~ []) (tm0 ^. active)
   where
     go (ActiveTask task state) (err,lvl,tm) =
       case next state of
-        Done               -> (err,lvl, tm)
+        Done               -> (err,lvl, unassignTask task tm)
         Yield trans state' ->
           case trans lvl of
             -- simply drop the task.
