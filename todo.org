@@ -1,11 +1,20 @@
 * TODO Gnome Citadel
-** DONE actor busy after task execution
-   CLOSED: [2014-08-13 Wed 12:42]
-** DONE findWall partial / write safe version
-   CLOSED: [2014-08-13 Wed 15:07]
-*** BUG marking empty field for mining -> empty list
-** GUI
+** Game Mechanics
+*** TODO task prerequisites (axe for wood chopping)
+*** TODO wood chopping (lumberer, tool?)
+*** TODO dwarf attributes (hp, sleeping, ...)
+*** DONE actor busy after task execution
+    CLOSED: [2014-08-13 Wed 12:42]
+*** DONE findWall partial / write safe version
+    CLOSED: [2014-08-13 Wed 15:07]
+**** BUG marking empty field for mining -> empty list
+** TODO GUI
 *** DONE message/logging area
     CLOSED: [2014-08-13 Wed 14:10]
 *** DONE visualize task manager
     CLOSED: [2014-08-13 Wed 15:07]
+** TODO Bugs
+*** Assigning tasks twice on same field -> error
+gnome-citadel: the identifer 'Tile {_id = Identifier 22, _charRepr =
+'#'}' has no assigned coordinate
+- don't do it twice if same task present (different equality check)
