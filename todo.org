@@ -1,8 +1,9 @@
+#+TODO: TODO(t) FEATURE(f) BUG(b) | DONE(d) CANCELED(c)
 * TODO Gnome Citadel
-** Game Mechanics
-*** TODO task prerequisites (axe for wood chopping)
-*** TODO wood chopping (lumberer, tool?)
-*** TODO dwarf attributes (hp, sleeping, ...)
+** TODO Game Mechanics
+*** FEATURE task prerequisites (axe for wood chopping)
+*** FEATURE wood chopping (lumberer, tool?)
+*** FEATURE dwarf attributes (hp, sleeping, ...)
 *** DONE actor busy after task execution
     CLOSED: [2014-08-13 Wed 12:42]
 *** DONE findWall partial / write safe version
@@ -14,7 +15,7 @@
 *** DONE visualize task manager
     CLOSED: [2014-08-13 Wed 15:07]
 ** TODO Bugs
-*** Assigning tasks twice on same field -> error
+*** BUG Assigning tasks twice on same field -> error
 gnome-citadel: the identifer 'Tile {_id = Identifier 22, _charRepr =
 '#'}' has no assigned coordinate
 - don't do it twice if same task present (different equality check)
