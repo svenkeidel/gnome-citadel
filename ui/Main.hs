@@ -14,7 +14,12 @@ import qualified Level.Task as LevelTask
 import           Renderable
 import           StaticElement (StaticElement)
 import           Task (Task)
-import           TaskManagement
+import           TaskManagement ( AbortedTask(..)
+                                , TaskManager
+                                , empty
+                                , addTask
+                                , assignTasks)
+import qualified TaskManagement as TM
 import           TestHelper (createLevel)
 import           Tile (TileRepr(toTile))
 
@@ -42,23 +47,27 @@ main = do
   shutdown vty
 
 onKeyPressed :: Monad m => t -> Char -> GameState -> m GameState
-onKeyPressed _ c state@(GameState csr lvl tm _ _) =
-  case c of
-       '.' -> return $ logMessages state $ executeGameStep lvl tm
-       'm' -> return $ case findWall csr lvl of
-         Just w  -> addTask' (LevelTask.mine w lvl) state
-         Nothing -> errorMessage "Mining target not mineable" state
-       'h' -> return $ moveCursor state (-1) 0
-       'j' -> return $ moveCursor state  0   1
-       'k' -> return $ moveCursor state  0 (-1)
-       'l' -> return $ moveCursor state  1   0
-       _   -> return state
+onKeyPressed _ c state = case c of
+  '.' -> return $ logMessages (TM.executeGameStep lvl tm ^. _1) state
+  'm' -> return $ case findWall csr lvl of
+    Just w  -> addTask' (LevelTask.mine w lvl) state
+    Nothing -> errorMessage "Mining target not mineable" state
+  'h' -> return $ moveCursor state (-1) 0
+  'j' -> return $ moveCursor state  0   1
+  'k' -> return $ moveCursor state  0 (-1)
+  'l' -> return $ moveCursor state  1   0
+  _   -> return state
+  where csr = state ^. cursor
+        lvl = state ^. level
+        tm = state ^. taskManager
 
 moveCursor :: GameState -> Int -> Int -> GameState
-moveCursor (GameState (x,y) lvl t msgs c) dx dy = GameState (x',y') lvl t msgs c
+moveCursor s dx dy = s & cursor .~ (x',y')
    where
        x' = min (max 0 (x + dx)) (lvl ^. bounds . _1)
        y' = min (max 0 (y + dy)) (lvl ^. bounds . _2)
+       (x,y) = s ^. cursor
+       lvl = s ^. level
 
 eventLoop :: Vty -> GameState -> IO ()
 eventLoop vty state = do
@@ -89,11 +98,11 @@ infoMessage str = messages %~ (str :)
 warnMessage :: String -> GameState -> GameState
 warnMessage str = messages %~ (str :)
 
-logMessages :: GameState -> ([AbortedTask], Level, TaskManager) -> GameState
-logMessages (GameState csr _ _ msgs c) (abortedTasks, lvl, tm) = GameState csr lvl tm (abortedTaskMessages abortedTasks ++ msgs) c
+logMessages :: [AbortedTask] -> GameState -> GameState
+logMessages abortedTasks = messages %~ (abortedTaskMessages abortedTasks ++)
 
 abortedTaskMessages :: [AbortedTask] -> [String]
-abortedTaskMessages = map (\ (AbortedTask _ msg) -> msg)
+abortedTaskMessages = map (\(AbortedTask _ msg) -> msg)
 
 findWall :: (Int, Int) -> Level -> Maybe StaticElement
 findWall c lvl = preview _head . flip findStaticElement lvl $ \t ->
@@ -112,9 +121,9 @@ drawMessages = vert_cat . map (string def_attr)
 
 drawTaskManager :: TaskManager -> Image
 drawTaskManager tm = vert_cat . map (string def_attr) $
-                     [ "inactive: " ++ tm ^. inactive . folded . to show
-                     , "active: " ++ tm ^. active . folded . to show
-                     , "assignment: " ++ (show $ tm ^. taskAssignment)
+                     [ "inactive: " ++ tm ^. TM.inactive . folded . to show
+                     , "active: " ++ tm ^. TM.active . folded . to show
+                     , "assignment: " ++ (show $ tm ^. TM.taskAssignment)
                      ]
 
 freshId :: GameState -> (Identifier a, GameState)
