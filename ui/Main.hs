@@ -1,11 +1,12 @@
 {-# LANGUAGE TemplateHaskell #-}
-module Main where
+module Main (main) where
 
-import           Control.Lens (_1, _2, preview, _head, folded, to)
+import           Control.Applicative ((<$>),(<*>))
+import           Control.Lens (_1, _2, preview, _head, folded, to, view)
 import           Control.Lens.Operators
 import           Control.Lens.TH
-import           Graphics.Vty
 import           Data.Default (Default(def))
+import           Graphics.Vty
 
 import           Counter (Counter, Identifier)
 import qualified Counter as C
@@ -48,7 +49,7 @@ main = do
 
 onKeyPressed :: Monad m => t -> Char -> GameState -> m GameState
 onKeyPressed _ c state = case c of
-  '.' -> return $ logMessages (TM.executeGameStep lvl tm ^. _1) state
+  '.' -> return $ executeGameStep state
   'm' -> return $ case findWall csr lvl of
     Just w  -> addTask' (LevelTask.mine w lvl) state
     Nothing -> errorMessage "Mining target not mineable" state
@@ -59,7 +60,11 @@ onKeyPressed _ c state = case c of
   _   -> return state
   where csr = state ^. cursor
         lvl = state ^. level
-        tm = state ^. taskManager
+
+executeGameStep :: GameState -> GameState
+executeGameStep s = s & level .~ lvl' & taskManager .~ tm' & logMessages aborted
+  where
+    (aborted, lvl', tm') = TM.executeGameStep <$> view level <*> view taskManager $ s
 
 moveCursor :: GameState -> Int -> Int -> GameState
 moveCursor s dx dy = s & cursor .~ (x',y')
