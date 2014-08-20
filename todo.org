@@ -21,3 +21,5 @@ gnome-citadel: the identifer 'Tile {_id = Identifier 22, _charRepr =
 - don't do it twice if same task present (different equality check)
 *** BUG Mining task is assigned although tool not available
 - check if actor satisfies required task prerequisites
+*** BUG After picking up tool, actor 'resets' to start point
+...and continues from there
