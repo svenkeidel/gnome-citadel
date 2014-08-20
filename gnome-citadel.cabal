@@ -45,10 +45,10 @@ library
 
 executable gnome-citadel
   hs-source-dirs:      ui, test
-  ghc-options:         -Wall
+  ghc-options:         -Wall -threaded
   Build-depends:       base ==4.*,
                        gnome-citadel,
-                       vty == 4.7.3,
+                       vty >= 5.1 && <= 5.2,
                        lens,
                        data-default
   main-is:             Main.hs

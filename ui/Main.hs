@@ -37,7 +37,7 @@ instance Default GameState where
 
 main :: IO ()
 main = do
-  vty <- mkVty
+  vty <- mkVty def
   let lvlInit = createLevel $ unlines startLevel
 
   eventLoop vty (def & level .~ lvlInit)
@@ -73,12 +73,12 @@ moveCursor s dx dy = s & cursor .~ (x',y')
 eventLoop :: Vty -> GameState -> IO ()
 eventLoop vty state = do
   update vty (drawGame state)
-  e <- next_event vty
+  e <- nextEvent vty
   case e of
     EvKey k _ ->
       case k of
-        (KASCII 'q') -> return ()
-        (KASCII c)   -> do
+        (KChar 'q') -> return ()
+        (KChar c)   -> do
           state' <- onKeyPressed vty c state
           eventLoop vty state'
         _ -> eventLoop vty state
@@ -110,18 +110,18 @@ findWall c lvl = preview _head . flip findStaticElement lvl $ \t ->
   render (toTile t) == '#' && lvl ^. coordOf t  == from2d c
 
 drawGame :: GameState -> Picture
-drawGame s = setCursor (s ^. cursor) . pic_for_image $
+drawGame s = setCursor (s ^. cursor) . picForImage $
              (drawLevel (s ^. level) <-> drawMessages (s ^. messages))
              <|> drawTaskManager (s ^. taskManager)
 
 drawLevel :: Level -> Image
-drawLevel = vert_cat . map (string def_attr) . lines . show
+drawLevel = vertCat . map (string defAttr) . lines . show
 
 drawMessages :: [String] -> Image
-drawMessages = vert_cat . map (string def_attr)
+drawMessages = vertCat . map (string defAttr)
 
 drawTaskManager :: TaskManager -> Image
-drawTaskManager tm = vert_cat . map (string def_attr) $
+drawTaskManager tm = vertCat . map (string defAttr) $
                      [ "inactive: " ++ tm ^. TM.inactive . folded . to show
                      , "active: " ++ tm ^. TM.active . folded . to show
                      , "assignment: " ++ show (tm ^. TM.taskAssignment)
@@ -132,7 +132,7 @@ freshId state = (ident,state & counter .~ cnt)
   where (ident,cnt) = C.freshId (state ^. counter)
 
 setCursor :: (Int, Int) -> Picture -> Picture
-setCursor (x,y) pic = pic { pic_cursor = Cursor (fromIntegral x) (fromIntegral y)}
+setCursor (x,y) pic = pic { picCursor = Cursor (fromIntegral x) (fromIntegral y)}
 
 
 startLevel :: [String]
