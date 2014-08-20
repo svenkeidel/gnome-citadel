@@ -38,11 +38,7 @@ instance Default GameState where
 main :: IO ()
 main = do
   vty <- mkVty
-  let lvlInit = createLevel $ unlines ["  ####  "
-                                      ,"  ##### "
-                                      ,"       x"
-                                      ,"  m  m  "
-                                      ]
+  let lvlInit = createLevel $ unlines startLevel
 
   eventLoop vty (def & level .~ lvlInit)
   shutdown vty
@@ -128,7 +124,7 @@ drawTaskManager :: TaskManager -> Image
 drawTaskManager tm = vert_cat . map (string def_attr) $
                      [ "inactive: " ++ tm ^. TM.inactive . folded . to show
                      , "active: " ++ tm ^. TM.active . folded . to show
-                     , "assignment: " ++ (show $ tm ^. TM.taskAssignment)
+                     , "assignment: " ++ show (tm ^. TM.taskAssignment)
                      ]
 
 freshId :: GameState -> (Identifier a, GameState)
@@ -137,3 +133,27 @@ freshId state = (ident,state & counter .~ cnt)
 
 setCursor :: (Int, Int) -> Picture -> Picture
 setCursor (x,y) pic = pic { pic_cursor = Cursor (fromIntegral x) (fromIntegral y)}
+
+
+startLevel :: [String]
+startLevel =
+  [ "                                                                "
+  , "                                                                "
+  , "    #####                                                   m   "
+  , "   #     # #    #  ####  #    # ######                          "
+  , "   #       ##   # #    # ##  ## #                               "
+  , "   #  #### # #  # #    # # ## # #####                           "
+  , "   #     # #  # # #    # #    # #                    x          "
+  , "   #     # #   ## #    # #    # #                               "
+  , "    #####  #    #  ####  #    # ######                          "
+  , "                                                                "
+  , "                  ######                                        "
+  , "                 #        # #####   ##   #####  ###### #        "
+  , "                 #        #   #    #  #  #    # #      #        "
+  , "                 #        #   #   #    # #    # #####  #        "
+  , "                 #        #   #   ###### #    # #      #        "
+  , "                 #        #   #   #    # #    # #      #        "
+  , "   m              ######  #   #   #    # #####  ###### ######   "
+  , "                                                                "
+  , "                                                                "
+  ]
