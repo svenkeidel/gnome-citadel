@@ -39,7 +39,7 @@ library
                        lens,
                        mtl,
                        PSQueue,
-                       transformers,
+                       transformers == 0.3.*,
                        data-default,
                        deepseq
 
@@ -65,7 +65,7 @@ test-suite specs
                        QuickCheck,
                        mtl,
                        lens,
-                       transformers,
+                       transformers == 0.3.*,
                        data-default == 0.5.*,
                        PSQueue == 1.1.*
 
