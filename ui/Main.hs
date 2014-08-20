@@ -6,6 +6,8 @@ import           Control.Lens (_1, _2, preview, _head, folded, to, view)
 import           Control.Lens.Operators
 import           Control.Lens.TH
 import           Data.Default (Default(def))
+import           Data.Maybe (catMaybes)
+import           Data.Traversable (traverse)
 import           Graphics.Vty
 
 import           Counter (Counter, Identifier)
@@ -23,6 +25,7 @@ import           TaskManagement ( AbortedTask(..)
 import qualified TaskManagement as TM
 import           TestHelper (createLevel)
 import           Tile (TileRepr(toTile))
+import           Utils
 
 data GameState = GameState { _cursor :: (Int,Int)
                            , _level:: Level
@@ -49,6 +52,10 @@ onKeyPressed _ c state = case c of
   'm' -> return $ case findWall csr lvl of
     Just w  -> addTask' (LevelTask.mine w lvl) state
     Nothing -> errorMessage "Mining target not mineable" state
+  'M' -> do
+    let ws = findAllWalls lvl
+        fs = map (\w -> addTask' $ LevelTask.mine w lvl) ws
+    return $ fs $$ state
   'h' -> return $ moveCursor state (-1) 0
   'j' -> return $ moveCursor state  0   1
   'k' -> return $ moveCursor state  0 (-1)
@@ -108,6 +115,10 @@ abortedTaskMessages = map (\(AbortedTask _ msg) -> msg)
 findWall :: (Int, Int) -> Level -> Maybe StaticElement
 findWall c lvl = preview _head . flip findStaticElement lvl $ \t ->
   render (toTile t) == '#' && lvl ^. coordOf t  == from2d c
+
+findAllWalls :: Level -> [StaticElement]
+findAllWalls lvl = catMaybes $ traverse findWall cs lvl
+  where cs = [(cdx,cdy) | cdx <- [0..lvl^.bounds._1], cdy <- [0..lvl^.bounds._2]]
 
 drawGame :: GameState -> Picture
 drawGame s = setCursor (s ^. cursor) . picForImage $
