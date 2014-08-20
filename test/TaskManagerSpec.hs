@@ -86,11 +86,22 @@ spec = describe "The TaskManager" $ do
           dwarf = findDwarf 'm' lvl
       taskManagerAssigned `shouldSatisfy` isAssignedTo task dwarf
 
-    it "gets assigned to a dwarf and executed" $ do
+    it "gets not assigned if suitable tool not available" $ do
+      pending
       let lvl = createLevel $ unlines [ "## "
                                       , " # "
                                       , "m  "
                                       ]
+          task = LevelTask.mine (findWall (1,0) lvl) lvl (Identifier 1)
+          taskManagerAssigned = assignTask' lvl task
+          dwarf = findDwarf 'm' lvl
+      taskManagerAssigned `shouldSatisfy` not . isAssignedTo task dwarf
+
+    it "gets assigned to a dwarf and executed" $ do
+      let lvl = createLevelWithTools $ unlines [ "## "
+                                               , " # "
+                                               , "m  "
+                                               ]
           task = LevelTask.mine (findWall (1,0) lvl) lvl (Identifier 1)
           taskManagerAssigned = assignTask' lvl task
       e <- execWriterT $ gameStepShouldChangeLevelTo [ "## "
@@ -112,10 +123,10 @@ spec = describe "The TaskManager" $ do
       unless (null e) $ expectationFailure $ show e
 
     it "is marked as completed after successful execution" $ do
-      let lvl = createLevel $ unlines [ "## "
-                                      , " # "
-                                      , "m  "
-                                      ]
+      let lvl = createLevelWithTools $ unlines [ "## "
+                                               , " # "
+                                               , "m  "
+                                               ]
           task = LevelTask.mine (findWall (1,0) lvl) lvl (Identifier 1)
           taskManagerAssigned = assignTask' lvl task
           dwarf = findDwarf 'm' lvl
@@ -130,6 +141,23 @@ spec = describe "The TaskManager" $ do
       elem task (getTask (tm' ^. active)) `shouldBe` False
 
       tm' `shouldSatisfy` not . isAssignedTo task dwarf
+
+    it "walls are mined" $ do
+      let lvl = createLevelWithTools $ unlines ["  ####  "
+                                               ,"  ##### "
+                                               ,"        "
+                                               ,"  m  m  "
+                                               ]
+          task1 = LevelTask.mine (findWall (2,0) lvl) lvl (Identifier 1)
+          task2 = LevelTask.mine (findWall (5,0) lvl) lvl (Identifier 2)
+          taskManagerAssigned = assignTasks lvl $ addTask task2 $ addTask task1 empty
+
+      ((_,tm'),e) <- runWriterT $
+        foldr1 (>=>) (replicate 10 executeGameStep') (lvl,taskManagerAssigned)
+
+      unless (null e) $ expectationFailure $ show e
+
+      tm' `shouldBe` empty
 
     where
       getTask = map (\(ActiveTask t _) -> t)

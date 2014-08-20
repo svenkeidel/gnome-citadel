@@ -12,7 +12,7 @@ import Level
 import Tile
 
 import Actor (Actor)
-import StaticElement (StaticElement)
+import StaticElement (StaticElement,Category)
 import qualified Actor
 import qualified StaticElement
 
@@ -22,6 +22,7 @@ data LevelError
   = PathBlocked Tile Coord
   | PathNotFound Coord Coord
   | ItemMissing Actor StaticElement Coord
+  | ToolMissing Category
   | OtherError String
 
 instance Error LevelError where
@@ -35,6 +36,8 @@ instance Show LevelError where
   show (ItemMissing a i c) = show $ OtherError $
     "The actor " ++ show a ++ " could not pickup the item " ++ show i ++
     " because it is not at the specified location " ++ show c
+  show (ToolMissing c) = show $ OtherError $
+    "No suitable tool for " ++ show c
   show (OtherError s)  = "LevelError: " ++ s
 
 

@@ -16,25 +16,27 @@ module TaskManagement ( TaskManager
                       , executeGameStep
                       ) where
 
-import Control.Lens(contains)
-import Control.Lens.TH
-import Control.Lens.Operators
+import           Control.Lens (contains)
+import           Control.Lens.Getter (view)
+import           Control.Lens.Operators
+import           Control.Lens.TH
+import           Data.Function (on)
 
-import Data.Default
-import Data.Maybe(listToMaybe, isJust)
-import Data.List(sortBy)
-import Data.Ord(comparing)
+import           Data.Default
+import           Data.Maybe (listToMaybe, isJust)
+import           Data.List (sortBy)
+import           Data.Ord (comparing)
 import qualified Data.Set as Set
 import qualified Data.Map as M
 import qualified Data.Foldable as F
 
-import Actor(Actor)
+import           Actor (Actor)
 import qualified Actor
-import Counter
-import Task
-import Level hiding (actors, isReachable)
+import           Counter
+import           Task
+import           Level hiding (actors, isReachable)
 import qualified Level
-import Unfold
+import           Unfold
 
 -- | Lifecycle of a task
 --
@@ -64,6 +66,11 @@ data TaskManager = TaskManager { _inactive :: Set.Set Task
 
                                }
 makeLenses ''TaskManager
+
+instance Eq TaskManager where
+  tm1 == tm2 = ((==) `on` view inactive) tm1 tm2 &&
+               ((==) `on` view active) tm1 tm2 &&
+               ((==) `on` view taskAssignment) tm1 tm2
 
 instance Show TaskManager where
   show (TaskManager inactiv activ _ assignments) =

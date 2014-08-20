@@ -56,3 +56,6 @@ instance Show ActiveTask where
 
 -- Stores the original task and the current state of the execution of the task.
 data ActiveTask = ActiveTask Task (Unfold (Level -> TaskStatus))
+
+instance Eq ActiveTask where
+  (ActiveTask t1 _) == (ActiveTask t2 _) = t1 == t2

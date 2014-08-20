@@ -1,4 +1,5 @@
 module TestHelper ( createLevel
+                  , createLevelWithTools
                   , findDwarf
                   , findDwarfByCoord
                   , findWall
@@ -6,35 +7,50 @@ module TestHelper ( createLevel
                   , isLeft
                   ) where
 
-import Control.Lens.Operators
+import           Control.Lens.Extras (is)
+import           Control.Lens.Fold (allOf, folded)
+import           Control.Lens.Getter (view)
+import           Control.Lens.Operators
+import           Data.Foldable (foldMap)
+import           Data.Monoid (Endo(Endo), appEndo)
 
-import Data.List(find)
-import Data.Maybe(isJust)
-import Data.Default
+import           Data.Default
 
-import Actor(Actor)
-import Counter
-import Level
-import Renderable
-import StaticElement(StaticElement)
-import Tile
-import TestTiles
+import           Actor (Actor, hasAbility, TaskType(Mine), pickItem)
+import           Counter
+import           Level
+import           Renderable
+import           StaticElement (StaticElement, _Walkable)
+import qualified StaticElement as S
+import           Tile
+import qualified TestTiles as T
 
 createLevel :: String -> Level
 createLevel lvlString = lvl & walkable .~ walkableFunction
   where
     lvl = fst $ fromString levelBuilder lvlString def
-    contains x = isJust . find ((x ==) . render)
-    walkableFunction level coord = (not . contains '#' . at coord $ level)
+    walkableFunction level coord = everythingWalkable (staticElementsAt coord level)
                                    && inBounds coord level
+    everythingWalkable :: [StaticElement] -> Bool
+    everythingWalkable = allOf folded (is _Walkable . view S.walkable)
+
+createLevelWithTools :: String -> Level
+createLevelWithTools lvlString =
+  let lvl = createLevel lvlString
+      giveMiningDwarfsPickaxes :: [Level -> Level]
+      giveMiningDwarfsPickaxes = zipWith givePickaxe (findActor (hasAbility Mine) lvl) [40..]
+      givePickaxe miner idt lvl' = let tool = T.pickaxe (Identifier idt)
+                                   in addActor (pickItem tool miner) $ addItem tool lvl'
+  in appEndo (foldMap Endo giveMiningDwarfsPickaxes) lvl
 
 levelBuilder :: TileBuilder
 levelBuilder ident char =
   case char of
-    '#' -> Just $ Right $ wall (asIdentifierOf ident)
-    ' ' -> Just $ Right $ free (asIdentifierOf ident)
-    'm' -> Just $ Left  $ miner (asIdentifierOf ident)
-    'c' -> Just $ Left  $ chopper (asIdentifierOf ident)
+    '#' -> Just $ Right $ T.wall (asIdentifierOf ident)
+    ' ' -> Just $ Right $ T.free (asIdentifierOf ident)
+    'm' -> Just $ Left  $ T.miner (asIdentifierOf ident)
+    'c' -> Just $ Left  $ T.chopper (asIdentifierOf ident)
+    'x' -> Just $ Right $ T.pickaxe (asIdentifierOf ident)
     _   -> error ("unrecognized char " ++ show char)
 
 findDwarf :: Char -> Level -> Actor

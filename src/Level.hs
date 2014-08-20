@@ -22,31 +22,38 @@ module Level ( Level (..)
              , inBounds
              , isReachable
              , deleteFromCoords
+             , actorInventory
+             , findTool
+
+             , addActor
+             , addItem
 
              , TileBuilder
 
              , module Coords
              ) where
 
-import Control.Lens (ix, lens, Lens', to, view)
-import Control.Lens.Operators
-import Control.Lens.TH
-import Data.Default
+import           Control.Lens (ix, lens, Lens', to, view, Fold, lastOf)
+import           Control.Lens.At (contains)
+import           Control.Lens.Fold (folded, elemOf, findOf)
+import           Control.Lens.Operators
+import           Control.Lens.TH
+import           Data.Default
 
 import qualified Control.Lens.Getter as LG
 import qualified Data.Map as M
 import qualified Data.List as L
 
-import Data.Maybe(mapMaybe,fromMaybe,isJust)
+import           Data.Maybe (mapMaybe,fromMaybe,isJust)
 
-import Counter
-import Tile
-import Renderable
-import Coords
-import Utils
+import           Counter
+import           Tile
+import           Renderable
+import           Coords
+import           Utils
 
-import Actor(Actor)
-import StaticElement(StaticElement)
+import           Actor (Actor)
+import           StaticElement (StaticElement,Category)
 import qualified Actor
 import qualified StaticElement
 import qualified Path as P
@@ -87,8 +94,8 @@ fromString builder str cnt0 = foldr insert (emptyLevel,cnt0) coordStr
     insert (coord,char) (lvl,cnt) =
       let (nextId,cnt') = freshId cnt
           lvl' = lvl & case builder nextId char of
-                        Just (Left  a) -> actors         %~ M.insert nextId (Actor.id .~ nextId $ a)
-                        Just (Right s) -> staticElements %~ M.insert nextId (StaticElement.id .~ nextId $ s)
+                        Just (Left  a) -> addActor (Actor.id .~ nextId $ a)
+                        Just (Right s) -> addItem (StaticElement.id .~ nextId $ s)
                         Nothing        -> Prelude.id
                     & idToCoord %~ M.insert nextId coord
                     & coordToId %~ M.insertWith (++) coord [nextId]
@@ -182,3 +189,22 @@ isReachable target lvl =
         canReach actor = isJust $ do
           actorCoord <- M.lookup (asIdentifierOf $ actor ^. Actor.id) (lvl ^. idToCoord)
           P.defaultPath (lvl ^-> walkable) actorCoord target
+
+actorInventory :: Level -> Actor -> [StaticElement]
+actorInventory lvl actor = map ((lvl ^. staticElements) M.!) invIds
+  where invIds = actor ^. Actor.inventory
+
+findTool :: Category -> Coord -> Level -> Maybe StaticElement
+findTool cat coord lvl = do
+  p <- P.searchPath (lvl ^-> walkable) (const 1) (const . const 1) coord predicate
+  c <- lastOf (P.pathCoords . folded) p
+  findOf folded (^. StaticElement.category . contains cat) $ staticElementsAt c lvl
+  where predicate c = elemOf categories cat $ staticElementsAt c lvl
+        categories :: Fold [StaticElement] Category
+        categories = folded . StaticElement.category . folded
+
+addItem :: StaticElement -> Level -> Level
+addItem item = staticElements %~ M.insert (item ^. StaticElement.id) item
+
+addActor :: Actor -> Level -> Level
+addActor actor = actors %~ M.insert (actor ^. Actor.id) actor

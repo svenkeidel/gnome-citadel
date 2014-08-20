@@ -24,17 +24,16 @@ main = hspec spec
 spec :: Spec
 spec = describe "An Execution" $ do
 
-  let level = createLevel $
-              unlines [ "## "
-                      , " # "
-                      , "m  "
-                      ]
+  let level = createLevelWithTools $ unlines [ "## "
+                                             , " # "
+                                             , "m  "
+                                             ]
       dwarf' = findDwarf 'm' level
 
       executeGameStep' :: SchedulerState -> SchedulerStateE
       executeGameStep' (lvl,com) =
         case next com of
-          Done             -> return $ (lvl,com)
+          Done             -> return (lvl,com)
           Yield trans com' -> ErrorT $ return $ do
             lvl' <- trans lvl
             return (lvl',com')
