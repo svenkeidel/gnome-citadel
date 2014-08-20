@@ -1,5 +1,5 @@
 name:                  gnome-citadel
-version:               0.1.0.0
+version:               0.2.0.0
 -- synopsis:
 -- description:
 license:               GPL-3
@@ -13,23 +13,68 @@ data-files:            tiles/*.png
 
 library
   hs-source-dirs:      src
-  Build-depends:       base ==4.5.*
-  
-executable sdl-test
-  hs-source-dirs:      test
-  main-is:             Game/SDLTest.hs
-  build-depends:       base ==4.5.*,
-                       SDL,
-                       SDL-image
+  ghc-options:         -Wall -Werror
+  exposed-modules:     Tile,
+                       Task,
+                       Level,
+                       Level.Transformation,
+                       Level.Command,
+                       Level.Task,
+                       Actor,
+                       Counter,
+                       Renderable,
+                       StaticElement,
+                       Scheduler,
+                       Unfold,
+                       Queue,
+                       Coords,
+                       Path,
+                       Path.Internal,
+                       TaskManagement,
+                       Utils,
+                       TestHelper,
+                       TestTiles
+  Build-depends:       base ==4.*,
+                       containers,
+                       lens,
+                       mtl,
+                       PSQueue,
+                       transformers,
+                       data-default,
+                       deepseq
+
+executable gnome-citadel
+  hs-source-dirs:      ui, test
+  ghc-options:         -Wall
+  Build-depends:       base ==4.*,
+                       gnome-citadel,
+                       vty == 4.7.3,
+                       lens,
+                       data-default
+  main-is:             Main.hs
 
 test-suite specs
   type:                exitcode-stdio-1.0
-  ghc-options:         -Wall -Werror
-  hs-source-dirs:      src, test
+  ghc-options:         -Wall
+  hs-source-dirs:      test
   main-is:             Spec.hs
-  build-depends:       base ==4.5.*,
-                       hspec,
+  build-depends:       base ==4.*,
+                       containers,
+                       hspec >= 1.9,
                        gnome-citadel,
                        QuickCheck,
+                       mtl,
                        lens,
-                       mtl
+                       transformers,
+                       data-default == 0.5.*,
+                       PSQueue == 1.1.*
+
+benchmark a-star-bench
+  type:             exitcode-stdio-1.0
+  hs-source-dirs:   bench
+  main-is:          AStarBench.hs
+  build-depends:    base,
+                    criterion,
+                    gnome-citadel
+  ghc-options:      -Wall
+                    -O2

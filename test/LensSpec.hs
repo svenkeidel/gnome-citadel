@@ -4,6 +4,7 @@ module LensSpec(main,spec) where
 import Control.Lens.TH
 import Control.Lens
 import Control.Monad.State (execState)
+import Data.Functor.Compose
 
 import Test.Hspec
 
@@ -33,3 +34,16 @@ spec = describe "Lenses" $ do
     oldId `shouldBe` 0
     newId `shouldBe` 1
     newLevel ^. lId `shouldBe` 1
+
+  context "isomorphisms" $ do
+
+    it "can be used with Data.Functor.Compose" $ do
+      let compose :: Iso' (f (g a)) (Compose f g a)
+          compose = iso Compose getCompose
+          input =    [ [1,2,3]
+                     , [4,5,6]
+                     , [7,8,9]] :: [[Int]]
+          expected = [ [2,3,4]
+                     , [5,6,7]
+                     , [8,9,10]] :: [[Int]]
+      over compose (fmap (+1)) input `shouldBe` expected
