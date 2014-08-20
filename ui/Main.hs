@@ -41,14 +41,16 @@ instance Default GameState where
 main :: IO ()
 main = do
   vty <- mkVty def
-  let lvlInit = createLevel $ unlines startLevel
-
   eventLoop vty (def & level .~ lvlInit)
   shutdown vty
+
+lvlInit :: Level
+lvlInit = createLevel $ unlines startLevel
 
 onKeyPressed :: Monad m => t -> Char -> GameState -> m GameState
 onKeyPressed _ c state = case c of
   '.' -> return $ executeGameStep state
+  ':' -> return $ nTimes 50 executeGameStep state
   'm' -> return $ case findWall csr lvl of
     Just w  -> addTask' (LevelTask.mine w lvl) state
     Nothing -> errorMessage "Mining target not mineable" state
@@ -60,9 +62,14 @@ onKeyPressed _ c state = case c of
   'j' -> return $ moveCursor state  0   1
   'k' -> return $ moveCursor state  0 (-1)
   'l' -> return $ moveCursor state  1   0
+  'r' -> return (def & level .~ lvlInit)
   _   -> return state
   where csr = state ^. cursor
         lvl = state ^. level
+
+nTimes :: Int -> (a -> a) -> a -> a
+nTimes 0 _ = id
+nTimes n f = f . nTimes (n-1) f
 
 executeGameStep :: GameState -> GameState
 executeGameStep s = s & level .~ lvl' & taskManager .~ tm' & logMessages aborted
@@ -158,8 +165,8 @@ vline = charFill defAttr '┃' 1
 
 startLevel :: [String]
 startLevel =
-  [ "                                                                "
-  , "                                                                "
+  [ "                                                           #####"
+  , "                                                           #####"
   , "    #####                                                   m   "
   , "   #     # #    #  ####  #    # ######                          "
   , "   #       ##   # #    # ##  ## #                               "
@@ -175,6 +182,6 @@ startLevel =
   , "                 #        #   #   ###### #    # #      #        "
   , "                 #        #   #   #    # #    # #      #        "
   , "   m              ######  #   #   #    # #####  ###### ######   "
-  , "                                                                "
-  , "                                                                "
+  , "#####                                                           "
+  , "#####                                                           "
   ]
