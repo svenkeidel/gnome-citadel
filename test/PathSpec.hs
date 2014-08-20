@@ -225,12 +225,9 @@ spec = describe "Path finding functionality" $ do
                                  && z == 0
                                  && x `elem` [0..5]
                                  && y `elem` [0..5]
-          path    = findArea allowed start goal
-      path `shouldBe` (Just $ pathFrom2d 3 [ (3,5)
-                                           , (4,4)
-                                           , (5,3)
-                                           , (4,2)
-                                           ])
+          path = findArea allowed start goal
+      (path ^? _Just . pathCoords) `shouldBe`
+        (Just . map from2d $ [ (3,5) , (4,4) , (5,3) , (4,2)])
 
     it "should return nothing if the goal area is empty" $ do
       let start   = from2d (0, 0)
