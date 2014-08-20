@@ -57,7 +57,7 @@ defaultPath walkable start goal =
 findArea :: (Coord -> Bool) -> Coord -> [Coord] -> Maybe Path
 findArea _ _ [] = Nothing
 findArea walkable start goals =
-  searchPath walkable heuristic (const . const $ 1) start (`elem` goals)
+  searchPath walkable heuristic distance start (`elem` goals)
   where
     heuristic :: Coord -> Double
     heuristic coord = minimum $ map (distance coord) goals
