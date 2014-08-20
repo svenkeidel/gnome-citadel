@@ -16,26 +16,26 @@ import StaticElement (StaticElement)
 import qualified Actor
 import qualified StaticElement
 
-type LevelTrans = Level -> Either LevelError Level
+type LevelTrans = Level -> (Either LevelError Level)
 
 data LevelError
   = PathBlocked Tile Coord
   | PathNotFound Coord Coord
   | ItemMissing Actor StaticElement Coord
-  | LevelError String
+  | OtherError String
 
 instance Error LevelError where
-  strMsg = LevelError
+  strMsg = OtherError
 
 instance Show LevelError where
-  show (PathBlocked t c) = show $ LevelError $
+  show (PathBlocked t c) = show $ OtherError $
     "The destination " ++ show c ++ " for the move of " ++ show t ++ " is blocked"
-  show (PathNotFound from to) = show $ LevelError $
+  show (PathNotFound from to) = show $ OtherError $
     "There exists no path from " ++ show from ++ " to " ++ show to
-  show (ItemMissing a i c) = show $ LevelError $
+  show (ItemMissing a i c) = show $ OtherError $
     "The actor " ++ show a ++ " could not pickup the item " ++ show i ++
     " because it is not at the specified location " ++ show c
-  show (LevelError s)  = "LevelError: " ++ s
+  show (OtherError s)  = "LevelError: " ++ s
 
 
 -- | move an actor or static element to an adjacent field
@@ -60,9 +60,10 @@ mine actor block level =
 
 
 failOnMissingItem :: Actor -> StaticElement -> Coord -> LevelTrans
-failOnMissingItem actor item oldCoord level = do
-  unless itemPresent $ throwError $ ItemMissing actor item oldCoord
-  return level
+failOnMissingItem actor item oldCoord level =
+  if itemPresent
+     then return level
+     else throwError $ ItemMissing actor item oldCoord
   where
     actualCoord = view (coordOf item) level
     itemPresent = oldCoord == actualCoord

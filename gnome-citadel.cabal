@@ -19,7 +19,6 @@ library
                        Level,
                        Level.Transformation,
                        Level.Command,
-                       Level.Scheduler,
                        Level.Task,
                        Actor,
                        Counter,
@@ -32,15 +31,27 @@ library
                        Path,
                        Path.Internal,
                        TaskManagement,
-                       Utils
+                       Utils,
+                       TestHelper,
+                       TestTiles
   Build-depends:       base ==4.*,
                        containers,
                        lens,
                        mtl,
-                       PSQueue == 1.1.*,
-                       transformers == 0.3.*,
-                       data-default == 0.5.*,
-                       deepseq == 1.3.*
+                       PSQueue,
+                       transformers,
+                       data-default,
+                       deepseq
+
+executable gnome-citadel
+  hs-source-dirs:      ui, test
+  ghc-options:         -Wall
+  Build-depends:       base ==4.*,
+                       gnome-citadel,
+                       vty == 4.7.3,
+                       lens,
+                       data-default
+  main-is:             Main.hs
 
 test-suite specs
   type:                exitcode-stdio-1.0

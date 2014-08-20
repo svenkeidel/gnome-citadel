@@ -1,6 +1,7 @@
 {-# LANGUAGE TemplateHaskell, FlexibleContexts, RankNTypes #-}
 module TaskManagement ( TaskManager
-                      , taskManager
+                      , AbortedTask (AbortedTask)
+                      , empty
                       , reachableBy
                       , active
                       , inactive
@@ -12,6 +13,7 @@ module TaskManagement ( TaskManager
                       , assignTasks
                       , assignTo
                       , isAssignedTo
+                      , executeGameStep
                       ) where
 
 import Control.Lens(contains)
@@ -32,8 +34,7 @@ import Counter
 import Task
 import Level hiding (actors, isReachable)
 import qualified Level
-import Level.Scheduler(CommandScheduler)
-import qualified Level.Scheduler as Scheduler
+import Unfold
 
 -- | Lifecycle of a task
 --
@@ -57,9 +58,10 @@ import qualified Level.Scheduler as Scheduler
 --                            +---------------+
 -- @
 data TaskManager = TaskManager { _inactive :: Set.Set Task
-                               , _active :: Set.Set Task
+                               , _active :: [ActiveTask]
                                , _reachableBy :: Level -> Task -> Actor -> Bool
                                , _taskAssignment :: M.Map (Identifier Actor) (Identifier Task)
+
                                }
 makeLenses ''TaskManager
 
@@ -70,12 +72,12 @@ instance Show TaskManager where
       ++ "_reachableBy = undefined" ++ ", "
       ++ "_taskAssignment = " ++ show assignments ++ "}"
 
-taskManager :: TaskManager
-taskManager = TaskManager { _inactive       = def
-                          , _active         = def
-                          , _taskAssignment = def
-                          , _reachableBy    = isReachableBy
-                          }
+empty :: TaskManager
+empty = TaskManager { _inactive       = def
+                    , _active         = def
+                    , _taskAssignment = def
+                    , _reachableBy    = isReachableBy
+                    }
 
 isReachableBy :: Level -> Task -> Actor -> Bool
 isReachableBy lvl task actor = isJust maybePath
@@ -118,24 +120,50 @@ bestForTheJob task actors lvl tm =
 
 -- | Looks through the list of inactive tasks and tries to
 -- automatically assign those to idle dwarves.
-assignTasks :: Level -> (CommandScheduler, TaskManager) -> (CommandScheduler, TaskManager)
-assignTasks lvl (cmdScheduler0, tm0) = F.foldl go (cmdScheduler0, tm0) (tm0 ^. inactive)
+assignTasks :: Level -> TaskManager -> TaskManager
+assignTasks lvl tm0 = F.foldl go tm0 (tm0 ^. inactive)
   where
-    go :: (CommandScheduler, TaskManager) -> Task -> (CommandScheduler, TaskManager)
-    go (cmdScheduler, tm) task =
+    go :: TaskManager -> Task -> TaskManager
+    go tm task =
       case bestForTheJob task (M.elems $ lvl ^. Level.actors) lvl tm of
-        Just actor -> assignTo task actor lvl (cmdScheduler, tm)
-        Nothing    -> (cmdScheduler, tm)
+        Just actor -> assignTo task actor lvl tm
+        Nothing    -> tm
 
 -- | Assign the given task to the given actor and add the appropriate
 -- command to the command scheduler.
-assignTo :: Task -> Actor -> Level -> (CommandScheduler, TaskManager) -> (CommandScheduler, TaskManager)
-assignTo task actor lvl (cmdScheduler, tm) = (cmdScheduler', tm')
+assignTo :: Task -> Actor -> Level -> TaskManager -> TaskManager
+assignTo task actor lvl
+  = (inactive       %~ Set.delete task)
+  . (active         %~ insert (ActiveTask task $ _command task actor lvl))
+  . (taskAssignment %~ M.insert (actor ^. Actor.id) (task ^. Task.id))
   where
-    tm' = tm & inactive       %~ Set.delete task
-             & active         %~ Set.insert task
-             & taskAssignment %~ M.insert (actor ^. Actor.id) (task ^. Task.id)
-    cmdScheduler' = Scheduler.addCommand (Task._command task actor lvl) cmdScheduler
+    insert = (:)
+
+unassignTask :: Task -> TaskManager -> TaskManager
+unassignTask task = taskAssignment %~ M.filter (/= task ^. Task.id)
 
 isAssignedTo :: Task -> Actor -> TaskManager -> Bool
 isAssignedTo t a tm = M.lookup (a ^. Actor.id) (tm ^. taskAssignment) == Just (t ^. Task.id)
+
+data AbortedTask = AbortedTask Task String
+    deriving (Show)
+
+executeGameStep :: Level -> TaskManager -> ([AbortedTask], Level, TaskManager)
+executeGameStep lvl0 tm0 = let (aborted,lvl',tm') = foldr go ([],lvl0,tm0 & active .~ []) (tm0 ^. active)
+                           in (aborted, lvl', assignTasks lvl' tm')
+  where
+    go (ActiveTask task state) (err,lvl,tm) =
+      case next state of
+        Done               -> (err,lvl, unassignTask task tm)
+        Yield trans state' ->
+          case trans lvl of
+            -- simply drop the task.
+            CannotBeCompleted s -> (AbortedTask task s : err,lvl, tm)
+
+            -- drop the current state and readd the task as inactive.
+            Reschedule          -> (err,lvl, addTask task tm)
+
+            -- update the task state in the manager and the modified level.
+            InProgress lvl'     -> (err,lvl', tm & active %~ insert (ActiveTask task state'))
+
+    insert = (:)

@@ -1,5 +1,7 @@
 {-# LANGUAGE TemplateHaskell #-}
 module Task ( Task (..)
+            , TaskStatus(..)
+            , ActiveTask(..)
             , id
             , target
             , taskType
@@ -15,15 +17,20 @@ import Data.Ord(comparing)
 
 import Counter
 import Coords
-import Level.Command(Command)
 import Actor(Actor, TaskType)
+import Unfold
 
 import Level
+
+data TaskStatus
+  = CannotBeCompleted String
+  | Reschedule
+  | InProgress Level
 
 data Task = Task { _id :: Identifier Task
                  , _target :: Coord
                  , _taskType :: TaskType
-                 , _command :: Actor -> Level -> Command
+                 , _command :: Actor -> Level -> Unfold (Level -> TaskStatus)
                  , _precondition :: Level -> Bool
                  }
 makeLenses ''Task
@@ -40,3 +47,12 @@ instance Eq Task where
 
 instance Ord Task where
   compare = comparing (^. id)
+
+instance Show ActiveTask where
+  show (ActiveTask task _)
+    = "ActiveTask ("
+   ++ show task
+   ++ ")"
+
+-- Stores the original task and the current state of the execution of the task.
+data ActiveTask = ActiveTask Task (Unfold (Level -> TaskStatus))

@@ -12,5 +12,8 @@ wall i = StaticElement i '#'
 free :: Identifier StaticElement -> StaticElement
 free i = StaticElement i ' '
 
-dwarf :: Identifier Actor -> Actor
-dwarf i = Actor i '@' [] (Set.fromList [Mine])
+miner :: Identifier Actor -> Actor
+miner i = Actor i 'm' [] (Set.fromList [Mine])
+
+chopper :: Identifier Actor -> Actor
+chopper i = Actor i 'c' [] (Set.fromList [Lumber])

@@ -1,35 +1,34 @@
 module TaskManagerSpec(main, spec) where
 
-import Control.Monad.Error
-import Control.Lens (_1)
+import           Control.Lens.Operators
+import           Control.Lens (_1)
+import           Control.Lens.At (contains)
+import           Control.Monad.Error
+import           Control.Monad.Writer
 
-import Counter
-import Level
-import TaskManagement
-
+import           Counter
+import           Level
+import           Task
+import           TaskManagement
 import qualified Level.Task as LevelTask
-import qualified Level.Scheduler as S
-import Level.Transformation
 
-import TestHelper
-import Test.Hspec
+import           TestHelper
+import           HspecHelper
+import           Test.Hspec
 
-type TaskManagerState = (Level, S.CommandScheduler, TaskManager)
-type TaskManagerStateE = ErrorT LevelError IO TaskManagerState
+type TaskManagerState = (Level, TaskManager)
+type TaskManagerStateE = WriterT [AbortedTask] IO TaskManagerState
 
 main :: IO ()
 main = hspec spec
 
 spec :: Spec
 spec = describe "The TaskManager" $ do
-  let lvl = createLevel $ unlines [ "## "
-                                  , " # "
-                                  , "@  "
-                                  ]
-      task = LevelTask.mine (findWall (1,0) lvl) lvl (Identifier 1)
-
+  let
       executeGameStep' :: TaskManagerState -> TaskManagerStateE
-      executeGameStep' (lvl', sched, tm) = ErrorT . return $ fmap (\(a,b) -> (a,b,tm)) (S.executeGameStep (lvl',sched))
+      executeGameStep' (lvl, tm) =
+        let (e,lvl',tm') = executeGameStep lvl tm
+        in writer ((lvl',tm'), e)
 
       gameStepShouldChangeLevelTo :: [String] -> TaskManagerState -> TaskManagerStateE
       gameStepShouldChangeLevelTo s =
@@ -38,38 +37,99 @@ spec = describe "The TaskManager" $ do
       mapLevel :: Functor m => (Level -> m Level) -> TaskManagerState -> m TaskManagerState
       mapLevel = _1
 
-  context "asking for a task" $
-    it "should return nothing if the task cannot be found"
-      pending
+      assignTask' lvl' task' = let taskManagerWithTask = addTask task' empty
+                             in assignTasks lvl' taskManagerWithTask
 
   context "when adding tasks" $ do
-    let taskManagerWithTask = addTask task taskManager
-        (cmdSchedAssigned, taskManagerAssigned) =
-          assignTasks lvl (S.empty, taskManagerWithTask)
 
-    it "hasTask returns true only for the added task"
-      pending
+    it "cannot be assigned to a incompatible dwarf" $ do
+      let lvl = createLevel $ unlines [ "## "
+                                      , " # "
+                                      , "c  "
+                                      ]
+          taskManagerAssigned = assignTask' lvl task
+          task = LevelTask.mine (findWall (1,0) lvl) lvl (Identifier 1)
+          dwarf = findDwarf 'c' lvl
+      taskManagerAssigned `shouldSatisfy` not . isAssignedTo task dwarf
+
+    it "cannot be assigned if dwarf cannot reach task location" $ do
+      let lvl = createLevel $ unlines [ " # "
+                                      , "   "
+                                      , "###"
+                                      , "m  "
+                                      ]
+          taskManagerAssigned = assignTask' lvl task
+          task = LevelTask.mine (findWall (1,0) lvl) lvl (Identifier 1)
+          dwarf = findDwarf 'm' lvl
+      taskManagerAssigned `shouldSatisfy` not . isAssignedTo task dwarf
+
+    it "gets assigned to the nearest dwarf" $ do
+      let lvl = createLevel $ unlines [ " # "
+                                      , "  m"
+                                      , "   "
+                                      , "m  "
+                                      ]
+          taskManagerAssigned = assignTask' lvl task
+          task = LevelTask.mine (findWall (1,0) lvl) lvl (Identifier 1)
+          dwarfLowerLeft = findDwarfByCoord (from2d (0,3)) lvl
+          dwarfUpperRight = findDwarfByCoord (from2d (2,1)) lvl
+      taskManagerAssigned `shouldSatisfy` isAssignedTo task dwarfUpperRight
+      taskManagerAssigned `shouldSatisfy` not . isAssignedTo task dwarfLowerLeft
 
     it "gets assigned to a dwarf" $ do
-      let dwarf = findDwarf lvl
+      let lvl = createLevel $ unlines [ "## "
+                                      , " # "
+                                      , "m  "
+                                      ]
+          task = LevelTask.mine (findWall (1,0) lvl) lvl (Identifier 1)
+          taskManagerAssigned = assignTask' lvl task
+          dwarf = findDwarf 'm' lvl
       taskManagerAssigned `shouldSatisfy` isAssignedTo task dwarf
 
     it "gets assigned to a dwarf and executed" $ do
-      e <- runErrorT $ gameStepShouldChangeLevelTo [ "## "
-                                                   , "@# "
-                                                   , "   "
-                                                   ]
-                       >=>
-                       gameStepShouldChangeLevelTo [ "#@ "
-                                                   , " # "
-                                                   , "   "
-                                                   ]
-                       >=>
-                       gameStepShouldChangeLevelTo [ "#@ "
-                                                   , " # "
-                                                   , "   "
-                                                   ]
-                     $ (lvl, cmdSchedAssigned, taskManagerAssigned)
-      case e of
-        Left e' -> expectationFailure $ show e'
-        Right _ -> return ()
+      let lvl = createLevel $ unlines [ "## "
+                                      , " # "
+                                      , "m  "
+                                      ]
+          task = LevelTask.mine (findWall (1,0) lvl) lvl (Identifier 1)
+          taskManagerAssigned = assignTask' lvl task
+      e <- execWriterT $ gameStepShouldChangeLevelTo [ "## "
+                                                     , "m# "
+                                                     , "   "
+                                                     ]
+                         >=>
+                         gameStepShouldChangeLevelTo [ "#m "
+                                                     , " # "
+                                                     , "   "
+                                                     ]
+                         >=>
+                         gameStepShouldChangeLevelTo [ "#m "
+                                                     , " # "
+                                                     , "   "
+                                                     ]
+                       $ (lvl, taskManagerAssigned)
+
+      unless (null e) $ expectationFailure $ show e
+
+    it "is marked as completed after successful execution" $ do
+      let lvl = createLevel $ unlines [ "## "
+                                      , " # "
+                                      , "m  "
+                                      ]
+          task = LevelTask.mine (findWall (1,0) lvl) lvl (Identifier 1)
+          taskManagerAssigned = assignTask' lvl task
+          dwarf = findDwarf 'm' lvl
+
+      ((_,tm'),e) <- runWriterT $
+        foldr1 (>=>) (replicate 10 executeGameStep') (lvl,taskManagerAssigned)
+
+      unless (null e) $ expectationFailure $ show e
+
+      tm' ^. inactive . contains task `shouldBe` False
+
+      elem task (getTask (tm' ^. active)) `shouldBe` False
+
+      tm' `shouldSatisfy` not . isAssignedTo task dwarf
+
+    where
+      getTask = map (\(ActiveTask t _) -> t)

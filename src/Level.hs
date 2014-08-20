@@ -11,6 +11,8 @@ module Level ( Level (..)
 
              , fromString
              , at
+             , actorsAt
+             , staticElementsAt
              , coordOf
              , findPath
              , findArea
@@ -29,7 +31,6 @@ module Level ( Level (..)
 import Control.Lens (ix, lens, Lens', to, view)
 import Control.Lens.Operators
 import Control.Lens.TH
-import Control.Applicative
 import Data.Default
 
 import qualified Control.Lens.Getter as LG
@@ -60,7 +61,7 @@ data Level = Level { _actors            :: M.Map (Identifier Actor) Actor
 makeLenses ''Level
 
 instance Show Level where
-  show = (^.toString)
+  show = toString
 
 -- | smart constructor for an empty level
 emptyLevel :: Level
@@ -96,23 +97,27 @@ fromString builder str cnt0 = foldr insert (emptyLevel,cnt0) coordStr
 
 -- | turns a level into a string. It pads the regions that contain no
 -- tiles with spaces until the maximum coordinates are reached.
-toString :: LG.Getter Level String
-toString = LG.to getter
+toString :: Level -> String
+toString lvl = unlines $ (map . map) (\c -> render . at c $ lvl) coords
   where
-    getter lvl = unlines $ (map . map) (\c -> render $ lvl ^. at c) coords
-      where
-        (mx,my) = lvl ^. bounds
-        coords  = [ [ from2d (x,y) | x <- [0..mx] ] | y <- [0..my] ] :: [[Coord]]
+    (mx,my) = lvl ^. bounds
+    coords  = [ [ from2d (x,y) | x <- [0..mx] ] | y <- [0..my] ] :: [[Coord]]
 
 -- | returns a list of tiles located at the given coordinate inside the level
-at :: Coord -> LG.Getter Level [Tile]
-at coord = LG.to getter
+at :: Coord -> Level -> [Tile]
+at coord lvl = map toTile (actorsAt coord lvl) ++ map toTile (staticElementsAt coord lvl)
+
+actorsAt :: Coord -> Level -> [Actor]
+actorsAt coord lvl = mapMaybe lookupTile ids
   where
-    getter lvl = mapMaybe lookupTile ids
-      where
-        ids = M.findWithDefault [] coord (lvl ^. coordToId)
-        lookupTile ident =  toTile <$> M.lookup (asIdentifierOf ident) (lvl ^. actors)
-                        <|> toTile <$> M.lookup (asIdentifierOf ident) (lvl ^. staticElements)
+    ids = M.findWithDefault [] coord (lvl ^. coordToId)
+    lookupTile ident = M.lookup (asIdentifierOf ident) (lvl ^. actors)
+
+staticElementsAt :: Coord -> Level -> [StaticElement]
+staticElementsAt coord lvl = mapMaybe lookupTile ids
+  where
+    ids = M.findWithDefault [] coord (lvl ^. coordToId)
+    lookupTile ident = M.lookup (asIdentifierOf ident) (lvl ^. staticElements)
 
 -- | gets and manipulates the coordinate at whitch the given tile is located
 --
@@ -154,14 +159,14 @@ findArea from dest lvl = P.findArea (lvl ^-> walkable) from dest
 
 -- | filters tiles of a level by a predicate and returns the
 -- satisfying tile as a list.
-findTile :: TileRepr t => LG.Getter Level (M.Map (Identifier a) t) -> (t -> Bool) -> LG.Getter Level [t]
-findTile tileGetter f = LG.to (\lvl -> M.elems $ M.filter f $ lvl ^. tileGetter)
+findTile :: TileRepr t =>  (Level -> M.Map (Identifier a) t) -> (t -> Bool) -> Level -> [t]
+findTile tileGetter f = M.elems . M.filter f . tileGetter
 
-findActor :: (Actor -> Bool) -> LG.Getter Level [Actor]
-findActor = findTile actors
+findActor :: (Actor -> Bool) -> Level -> [Actor]
+findActor = findTile (view actors)
 
-findStaticElement :: (StaticElement -> Bool) -> LG.Getter Level [StaticElement]
-findStaticElement = findTile staticElements
+findStaticElement :: (StaticElement -> Bool) -> Level -> [StaticElement]
+findStaticElement = findTile (view staticElements)
 
 deleteFromCoords :: TileRepr t => t -> Level -> Level
 deleteFromCoords t level = maybe level' (\c' -> level' & coordToId . ix c' %~ L.delete tid) c
