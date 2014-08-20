@@ -111,8 +111,13 @@ findWall c lvl = preview _head . flip findStaticElement lvl $ \t ->
 
 drawGame :: GameState -> Picture
 drawGame s = setCursor (s ^. cursor) . picForImage $
-             (drawLevel (s ^. level) <-> drawMessages (s ^. messages))
-             <|> drawTaskManager (s ^. taskManager)
+             (lvl' <-> msg) <|> vSep <|> tm
+  where lvl = drawLevel (s ^. level)
+        lvl' = lvl <-> hSep
+        msg = drawMessages (s ^. messages)
+        tm =drawTaskManager (s ^. taskManager)
+        vSep = vline $ imageHeight lvl'
+        hSep = hline $ imageWidth lvl
 
 drawLevel :: Level -> Image
 drawLevel = vertCat . map (string defAttr) . lines . show
@@ -134,6 +139,11 @@ freshId state = (ident,state & counter .~ cnt)
 setCursor :: (Int, Int) -> Picture -> Picture
 setCursor (x,y) pic = pic { picCursor = Cursor (fromIntegral x) (fromIntegral y)}
 
+hline :: Integral d => d -> Image
+hline n = charFill defAttr '━' n 1
+
+vline :: Integral d => d -> Image
+vline = charFill defAttr '┃' 1
 
 startLevel :: [String]
 startLevel =
