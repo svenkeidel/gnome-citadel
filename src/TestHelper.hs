@@ -11,8 +11,6 @@ import           Control.Lens.Extras (is)
 import           Control.Lens.Fold (allOf, folded)
 import           Control.Lens.Getter (view)
 import           Control.Lens.Operators
-import           Data.Foldable (foldMap)
-import           Data.Monoid (Endo(Endo), appEndo)
 
 import           Data.Default
 
@@ -22,8 +20,9 @@ import           Level
 import           Renderable
 import           StaticElement (StaticElement, _Walkable)
 import qualified StaticElement as S
-import           Tile
 import qualified TestTiles as T
+import           Tile
+import           Utils
 
 createLevel :: String -> Level
 createLevel lvlString = lvl & walkable .~ walkableFunction
@@ -41,7 +40,7 @@ createLevelWithTools lvlString =
       giveMiningDwarfsPickaxes = zipWith givePickaxe (findActor (hasAbility Mine) lvl) [40..]
       givePickaxe miner idt lvl' = let tool = T.pickaxe (Identifier idt)
                                    in addActor (pickItem tool miner) $ addItem tool lvl'
-  in appEndo (foldMap Endo giveMiningDwarfsPickaxes) lvl
+  in giveMiningDwarfsPickaxes $$ lvl
 
 levelBuilder :: TileBuilder
 levelBuilder ident char =
