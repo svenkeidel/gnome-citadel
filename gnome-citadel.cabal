@@ -36,7 +36,7 @@ library
                        TestTiles
   Build-depends:       base ==4.*,
                        containers,
-                       lens,
+                       lens >= 4.4 && < 4.5,
                        mtl,
                        PSQueue,
                        transformers == 0.3.*,
@@ -49,7 +49,7 @@ executable gnome-citadel
   Build-depends:       base ==4.*,
                        gnome-citadel,
                        vty >= 5.1 && <= 5.2,
-                       lens,
+                       lens >= 4.4 && < 4.5,
                        data-default
   main-is:             Main.hs
 
@@ -64,7 +64,7 @@ test-suite specs
                        gnome-citadel,
                        QuickCheck,
                        mtl,
-                       lens,
+                       lens >= 4.4 && < 4.5,
                        transformers == 0.3.*,
                        data-default == 0.5.*,
                        PSQueue == 1.1.*
