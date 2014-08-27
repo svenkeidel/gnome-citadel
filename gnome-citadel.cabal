@@ -48,7 +48,7 @@ executable gnome-citadel
   ghc-options:         -Wall -threaded
   Build-depends:       base ==4.*,
                        gnome-citadel,
-                       vty >= 5.1 && <= 5.2,
+                       vty >= 5.2 && < 5.3,
                        lens >= 4.4 && < 4.5,
                        data-default
   main-is:             Main.hs
@@ -76,5 +76,17 @@ benchmark a-star-bench
   build-depends:    base,
                     criterion,
                     gnome-citadel
+  ghc-options:      -Wall
+                    -O2
+
+benchmark task-scheduling
+  type:             exitcode-stdio-1.0
+  hs-source-dirs:   bench
+  main-is:          TaskScheduling.hs
+  build-depends:    base,
+                    criterion,
+                    gnome-citadel,
+                    mtl,
+                    lens
   ghc-options:      -Wall
                     -O2
