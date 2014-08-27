@@ -12,6 +12,7 @@ module Actor ( Actor (..)
 
 import           Control.Lens.Fold (folded, elemOf)
 import Prelude hiding(id)
+import           Data.Function (on)
 
 import           Control.Lens.Operators
 import           Control.Lens.TH
@@ -29,6 +30,9 @@ data Actor = Actor { _id :: Identifier Actor
                    , _abilities :: Set.Set TaskType
                    } deriving Show
 makeLenses ''Actor
+
+instance Eq Actor where
+  (==) = (==) `on` _id
 
 pickItem :: S.StaticElement -> Actor -> Actor
 pickItem item actor = actor & inventory %~ (item ^. S.id :)

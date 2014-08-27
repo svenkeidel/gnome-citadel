@@ -9,8 +9,8 @@ module TaskManagement ( TaskManager
                       , addTask
                       , addTaskE
                       , canBeDoneBy
-                      , bestForTheJob
                       , assignTasks
+                      , idleActors
                       , assignTo
                       , isAssignedTo
                       , executeGameStep
@@ -20,21 +20,21 @@ import           Control.Lens (contains)
 import           Control.Lens.Getter (view)
 import           Control.Lens.Operators
 import           Control.Lens.TH
+import           Control.Monad (guard)
 import           Data.Function (on)
+import           Data.List (sortBy)
 
 import           Data.Default
-import           Data.Maybe (listToMaybe, isJust)
-import           Data.List (sortBy)
+import qualified Data.Map as M
+import           Data.Maybe (isJust)
 import           Data.Ord (comparing)
 import qualified Data.Set as Set
-import qualified Data.Map as M
-import qualified Data.Foldable as F
 
 import           Actor (Actor)
 import qualified Actor
 import           Counter
 import           Task
-import           Level hiding (actors, isReachable)
+import           Level hiding (isReachable, actors)
 import qualified Level
 import           Unfold
 
@@ -106,35 +106,48 @@ addTask :: Task -> TaskManager -> TaskManager
 addTask task tm = tm & inactive %~ Set.insert task
 
 -- | Determines if the given task can be done by the given actor
-canBeDoneBy :: Task -> Actor -> Level -> TaskManager -> Bool
-canBeDoneBy task actor lvl tm = hasAbility && not busy && reachable
+canBeDoneBy :: Level -> TaskManager -> Actor -> Task -> Bool
+canBeDoneBy lvl tm actor task = hasAbility && not busy && reachable
   where
     busy       = M.member (actor ^. Actor.id) (tm ^. taskAssignment)
     hasAbility = actor ^. Actor.abilities . contains (task ^. taskType)
     reachable  = _reachableBy tm lvl task actor
 
--- | Searches from a list of actors the actor that is best suited for
--- the task. This implies that the actor has the proper abilities and
--- no other actor is physically nearer located to the task (this does
--- not mean that he has the shortest path to the task).
-bestForTheJob :: Task -> [Actor] -> Level -> TaskManager -> Maybe Actor
-bestForTheJob task actors lvl tm =
-  listToMaybe $ sortBy distanceToTask
-              $ filter (\actor -> canBeDoneBy task actor lvl tm) actors
-  where
-    distanceToTask = comparing $ \actor ->
-      distance (lvl ^. coordOf actor) (task ^. Task.target)
+-- bestJobFor :: Actor -> Level -> TaskManager -> Maybe Task
+-- bestJobFor actor lvl tm = minimumByOf folded (comparing $ distanceToTask actor)
+--                         $ Set.filter (canBeDoneBy lvl tm actor) (tm ^. inactive)
+--   where
 
--- | Looks through the list of inactive tasks and tries to
--- automatically assign those to idle dwarves.
+
+-- assignTasks :: Level -> TaskManager -> TaskManager
+-- assignTasks lvl tm0 = foldl go tm0 (idleActors lvl tm0)
+--   where
+--     go tm actor =
+--       case bestJobFor actor lvl tm of
+--         Just t  -> assignTo t actor lvl tm
+--         Nothing -> tm
+
 assignTasks :: Level -> TaskManager -> TaskManager
-assignTasks lvl tm0 = F.foldl go tm0 (tm0 ^. inactive)
+assignTasks lvl tm0 = chooseAssignments tm0 possibleAssignments
+  where chooseAssignments tm []             = tm
+        chooseAssignments tm ((a,t):tuples) =
+          let tm' = assignTo t a lvl tm
+          in chooseAssignments tm' $ filter (\(a',t') -> not (a == a' || t == t')) tuples
+        possibleAssignments = sortBy (comparing $ uncurry distanceToTask) $ do
+          idleActor <- idleActors lvl tm0
+          task <- Set.toList . view inactive $ tm0
+          guard $ canBeDoneBy lvl tm0 idleActor task
+          return (idleActor, task)
+        distanceToTask :: Actor -> Task -> Double
+        distanceToTask a task = distance (lvl ^. coordOf a) (task ^. Task.target)
+
+idleActors :: Level -> TaskManager -> [Actor]
+idleActors lvl tm = actors
   where
-    go :: TaskManager -> Task -> TaskManager
-    go tm task =
-      case bestForTheJob task (M.elems $ lvl ^. Level.actors) lvl tm of
-        Just actor -> assignTo task actor lvl tm
-        Nothing    -> tm
+    isBusy :: Identifier Actor -> Bool
+    isBusy actor = M.member actor $ tm ^. taskAssignment
+    actors = M.foldlWithKey' (\as k a -> if isBusy k then as else a :as) [] (lvl ^. Level.actors)
+      -- M.elems . M.filterWithKey (\k _ -> isBusy k) $ (lvl ^. Level.actors)
 
 -- | Assign the given task to the given actor and add the appropriate
 -- command to the command scheduler.

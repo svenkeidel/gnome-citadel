@@ -1,20 +1,20 @@
 module TaskManagerSpec(main, spec) where
 
-import           Control.Lens.Operators
 import           Control.Lens (_1)
 import           Control.Lens.At (contains)
+import           Control.Lens.Operators
 import           Control.Monad.Error
 import           Control.Monad.Writer
 
 import           Counter
 import           Level
-import           Task
-import           TaskManagement
 import qualified Level.Task as LevelTask
+import           Task hiding (unless)
+import           TaskManagement
 
-import           TestHelper
 import           HspecHelper
 import           Test.Hspec
+import           TestHelper
 
 type TaskManagerState = (Level, TaskManager)
 type TaskManagerStateE = WriterT [AbortedTask] IO TaskManagerState

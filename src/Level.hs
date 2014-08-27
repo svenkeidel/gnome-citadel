@@ -23,6 +23,7 @@ module Level ( Level (..)
              , isReachable
              , deleteFromCoords
              , actorInventory
+             , holdsSuitableTool
              , findTool
 
              , addActor
@@ -35,7 +36,7 @@ module Level ( Level (..)
 
 import           Control.Lens (ix, lens, Lens', to, view, Fold, lastOf)
 import           Control.Lens.At (contains)
-import           Control.Lens.Fold (folded, elemOf, findOf)
+import           Control.Lens.Fold (folded, elemOf, findOf, anyOf)
 import           Control.Lens.Operators
 import           Control.Lens.TH
 import           Data.Default
@@ -194,14 +195,18 @@ actorInventory :: Level -> Actor -> [StaticElement]
 actorInventory lvl actor = map ((lvl ^. staticElements) M.!) invIds
   where invIds = actor ^. Actor.inventory
 
+holdsSuitableTool :: Level -> Actor -> Category -> Bool
+holdsSuitableTool lvl actor cat = anyOf categories (== cat) (actorInventory lvl actor)
+
 findTool :: Category -> Coord -> Level -> Maybe StaticElement
 findTool cat coord lvl = do
   p <- P.searchPath (lvl ^-> walkable) (const 1) (const . const 1) coord predicate
   c <- lastOf (P.pathCoords . folded) p
   findOf folded (^. StaticElement.category . contains cat) $ staticElementsAt c lvl
   where predicate c = elemOf categories cat $ staticElementsAt c lvl
-        categories :: Fold [StaticElement] Category
-        categories = folded . StaticElement.category . folded
+
+categories :: Fold [StaticElement] Category
+categories = folded . StaticElement.category . folded
 
 addItem :: StaticElement -> Level -> Level
 addItem item = staticElements %~ M.insert (item ^. StaticElement.id) item

@@ -7,6 +7,7 @@ module Task ( Task (..)
             , taskType
             , command
             , precondition
+            , unless
             ) where
 
 import Prelude hiding (id)
@@ -14,6 +15,7 @@ import Control.Lens((^.))
 import Control.Lens.TH
 
 import Data.Ord(comparing)
+import Data.Monoid
 
 import Counter
 import Coords
@@ -27,11 +29,23 @@ data TaskStatus
   | Reschedule
   | InProgress Level
 
+data Condition w = Failed w | Satisfied deriving (Show,Eq)
+
+instance Monoid w => Monoid (Condition w) where
+  mempty = Satisfied
+  Failed w  `mappend` Failed u  = Failed (w `mappend` u)
+  Failed w  `mappend` Satisfied = Failed w
+  Satisfied `mappend` x         = x
+
+unless :: Bool -> a -> Condition a
+unless b s | b         = Satisfied
+         | otherwise = Failed s
+
 data Task = Task { _id :: Identifier Task
                  , _target :: Coord
                  , _taskType :: TaskType
                  , _command :: Actor -> Level -> Unfold (Level -> TaskStatus)
-                 , _precondition :: Level -> Bool
+                 , _precondition :: Level -> Actor -> Condition String
                  }
 makeLenses ''Task
 
