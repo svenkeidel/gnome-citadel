@@ -23,3 +23,4 @@ gnome-citadel: the identifer 'Tile {_id = Identifier 22, _charRepr =
 - check if actor satisfies required task prerequisites
 *** BUG After picking up tool, actor 'resets' to start point
 ...and continues from there
+*** BUG Chosen task is not the one nearest to actor
