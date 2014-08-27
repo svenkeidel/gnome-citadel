@@ -5,9 +5,13 @@ module Counter ( Counter
                ) where
 
 import Data.Default
+import Control.DeepSeq (NFData,rnf)
 
 newtype Identifier a = Identifier Int
   deriving (Eq, Ord, Show)
+
+instance NFData (Identifier a) where
+  rnf (Identifier x) = rnf x
 
 newtype Counter = Counter Int
 

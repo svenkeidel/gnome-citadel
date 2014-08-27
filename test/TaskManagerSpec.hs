@@ -38,7 +38,7 @@ spec = describe "The TaskManager" $ do
       mapLevel = _1
 
       assignTask' lvl' task' = let taskManagerWithTask = addTask task' empty
-                             in assignTasks lvl' taskManagerWithTask
+                               in assignTasks lvl' taskManagerWithTask
 
   context "when adding tasks" $ do
 

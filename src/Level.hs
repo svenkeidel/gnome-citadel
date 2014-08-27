@@ -53,11 +53,12 @@ import           Renderable
 import           Coords
 import           Utils
 
-import           Actor (Actor)
-import           StaticElement (StaticElement,Category)
 import qualified Actor
-import qualified StaticElement
+import           Actor (Actor)
+import           Control.DeepSeq (NFData, rnf)
 import qualified Path as P
+import qualified StaticElement
+import           StaticElement (StaticElement,Category)
 
 data Level = Level { _actors            :: M.Map (Identifier Actor) Actor
                    , _staticElements    :: M.Map (Identifier StaticElement) StaticElement
@@ -67,6 +68,10 @@ data Level = Level { _actors            :: M.Map (Identifier Actor) Actor
                    , _walkable          :: Level -> Coord -> Bool
                    }
 makeLenses ''Level
+
+instance NFData Level where
+  rnf (Level as ses bs itc cti _) = rnf (as,ses,bs,itc,cti)
+
 
 instance Show Level where
   show = toString

@@ -23,6 +23,8 @@ import Actor(Actor, TaskType)
 import Unfold
 
 import Level
+import Control.DeepSeq (NFData)
+import Control.DeepSeq (rnf)
 
 data TaskStatus
   = CannotBeCompleted String
@@ -49,6 +51,10 @@ data Task = Task { _id :: Identifier Task
                  }
 makeLenses ''Task
 
+instance NFData Task where
+  rnf (Task (Identifier tid) tgt typ _ _) = rnf (tid,tgt,typ)
+
+
 instance Show Task where
   show task = "Task "
            ++ "{ _id = " ++ show (task ^. id)
@@ -70,6 +76,9 @@ instance Show ActiveTask where
 
 -- Stores the original task and the current state of the execution of the task.
 data ActiveTask = ActiveTask Task (Unfold (Level -> TaskStatus))
+
+instance NFData ActiveTask where
+  rnf (ActiveTask x1 _) = rnf x1
 
 instance Eq ActiveTask where
   (ActiveTask t1 _) == (ActiveTask t2 _) = t1 == t2

@@ -21,8 +21,13 @@ import qualified Data.Set as Set
 
 import           Counter
 import qualified StaticElement as S
+import Control.DeepSeq (NFData, rnf)
 
 data TaskType = Mine | Lumber deriving (Show,Eq,Ord)
+
+instance NFData TaskType where
+  rnf Mine = ()
+  rnf Lumber = ()
 
 data Actor = Actor { _id :: Identifier Actor
                    , _charRepr :: Char
@@ -30,6 +35,9 @@ data Actor = Actor { _id :: Identifier Actor
                    , _abilities :: Set.Set TaskType
                    } deriving Show
 makeLenses ''Actor
+
+instance NFData Actor where
+  rnf (Actor i c inv ab) = rnf (i,c,inv,ab)
 
 instance Eq Actor where
   (==) = (==) `on` _id

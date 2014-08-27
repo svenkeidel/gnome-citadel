@@ -30,12 +30,13 @@ import           Data.Maybe (isJust)
 import           Data.Ord (comparing)
 import qualified Data.Set as Set
 
-import           Actor (Actor)
 import qualified Actor
+import           Actor (Actor)
+import           Control.DeepSeq
 import           Counter
-import           Task
-import           Level hiding (isReachable, actors)
 import qualified Level
+import           Level hiding (isReachable, actors)
+import           Task
 import           Unfold
 
 -- | Lifecycle of a task
@@ -66,6 +67,9 @@ data TaskManager = TaskManager { _inactive :: Set.Set Task
 
                                }
 makeLenses ''TaskManager
+
+instance NFData TaskManager where
+  rnf (TaskManager ias as _ assigns) = rnf (ias,as,assigns)
 
 instance Eq TaskManager where
   tm1 == tm2 = ((==) `on` view inactive) tm1 tm2 &&
@@ -167,6 +171,9 @@ isAssignedTo t a tm = M.lookup (a ^. Actor.id) (tm ^. taskAssignment) == Just (t
 
 data AbortedTask = AbortedTask Task String
     deriving (Show)
+
+instance NFData AbortedTask where
+  rnf (AbortedTask t s) = rnf (t,s)
 
 executeGameStep :: Level -> TaskManager -> ([AbortedTask], Level, TaskManager)
 executeGameStep lvl0 tm0 = let (aborted,lvl',tm') = foldr go ([],lvl0,tm0 & active .~ []) (tm0 ^. active)
