@@ -113,9 +113,9 @@ addTask task tm = tm & inactive %~ Set.insert task
 canBeDoneBy :: Level -> TaskManager -> Actor -> Task -> Bool
 canBeDoneBy lvl tm actor task = hasAbility && not busy && reachable
   where
-    busy       = M.member (actor ^. Actor.id) (tm ^. taskAssignment)
-    hasAbility = actor ^. Actor.abilities . contains (task ^. taskType)
-    reachable  = _reachableBy tm lvl task actor
+    busy       = {-# SCC "canBeDoneBy_busy" #-} M.member (actor ^. Actor.id) (tm ^. taskAssignment)
+    hasAbility = {-# SCC "canBeDoneBy_hasAbility" #-} actor ^. Actor.abilities . contains (task ^. taskType)
+    reachable  = {-# SCC "canBeDoneBy_reachable" #-} _reachableBy tm lvl task actor
 
 -- bestJobFor :: Actor -> Level -> TaskManager -> Maybe Task
 -- bestJobFor actor lvl tm = minimumByOf folded (comparing $ distanceToTask actor)
@@ -132,18 +132,18 @@ canBeDoneBy lvl tm actor task = hasAbility && not busy && reachable
 --         Nothing -> tm
 
 assignTasks :: Level -> TaskManager -> TaskManager
-assignTasks lvl tm0 = chooseAssignments tm0 possibleAssignments
+assignTasks lvl tm0 = {-# SCC "assignTasks" #-} chooseAssignments tm0 possibleAssignments
   where chooseAssignments tm []             = tm
-        chooseAssignments tm ((a,t):tuples) =
+        chooseAssignments tm ((a,t):tuples) = {-# SCC "chooseAssignments" #-}
           let tm' = assignTo t a lvl tm
           in chooseAssignments tm' $ filter (\(a',t') -> not (a == a' || t == t')) tuples
-        possibleAssignments = sortBy (comparing $ uncurry distanceToTask) $ do
-          idleActor <- idleActors lvl tm0
-          task <- Set.toList . view inactive $ tm0
-          guard $ canBeDoneBy lvl tm0 idleActor task
-          return (idleActor, task)
+        possibleAssignments = {-# SCC "possibleAssignments_sorting" #-} sortBy (comparing $ uncurry distanceToTask) $ do
+          idleActor <- {-# SCC "idleActors" #-} idleActors lvl tm0
+          task <- {-# SCC "inactiveTaskList" #-} Set.toList . view inactive $ tm0
+          {-# SCC "canBeDoneByGuard" #-} guard $ canBeDoneBy lvl tm0 idleActor task
+          {-# SCC "possibleAssignments_return" #-} return (idleActor, task)
         distanceToTask :: Actor -> Task -> Double
-        distanceToTask a task = distance (lvl ^. coordOf a) (task ^. Task.target)
+        distanceToTask a task = {-# SCC "distance" #-} distance (lvl ^. coordOf a) (task ^. Task.target)
 
 idleActors :: Level -> TaskManager -> [Actor]
 idleActors lvl tm = actors
