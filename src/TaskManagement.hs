@@ -22,21 +22,23 @@ import           Control.Lens.Operators
 import           Control.Lens.TH
 import           Control.Monad (guard)
 import           Data.Function (on)
-import           Data.List (sortBy)
+import           Data.List (sortBy,(\\))
 
 import           Data.Default
 import qualified Data.Map as M
 import           Data.Maybe (isJust)
 import           Data.Ord (comparing)
+import           Data.Set(Set)
 import qualified Data.Set as Set
 
-import qualified Actor
 import           Actor (Actor)
+import qualified Actor
 import           Control.DeepSeq
 import           Counter
 import qualified Level
 import           Level hiding (isReachable, actors)
-import           Task
+import           Task (Task,ActiveTask(..),TaskStatus(..))
+import qualified Task
 import           Unfold
 
 -- | Lifecycle of a task
@@ -64,7 +66,6 @@ data TaskManager = TaskManager { _inactive :: Set.Set Task
                                , _active :: [ActiveTask]
                                , _reachableBy :: Level -> Task -> Actor -> Bool
                                , _taskAssignment :: M.Map (Identifier Actor) (Identifier Task)
-
                                }
 makeLenses ''TaskManager
 
@@ -93,7 +94,7 @@ empty = TaskManager { _inactive       = def
 isReachableBy :: Level -> Task -> Actor -> Bool
 isReachableBy lvl task actor = isJust maybePath
   where  actorCoord = lvl ^. coordOf actor
-         targetCoord = task ^. target
+         targetCoord = task ^. Task.target
          maybePath = findArea actorCoord destCoords lvl
          destCoords = if isWalkable targetCoord lvl
                       then [targetCoord]
@@ -114,7 +115,7 @@ canBeDoneBy :: Level -> TaskManager -> Actor -> Task -> Bool
 canBeDoneBy lvl tm actor task = hasAbility && not busy && reachable
   where
     busy       = M.member (actor ^. Actor.id) (tm ^. taskAssignment)
-    hasAbility = actor ^. Actor.abilities . contains (task ^. taskType)
+    hasAbility = actor ^. Actor.abilities . contains (task ^. Task.taskType)
     reachable  = _reachableBy tm lvl task actor
 
 -- bestJobFor :: Actor -> Level -> TaskManager -> Maybe Task
@@ -131,9 +132,26 @@ canBeDoneBy lvl tm actor task = hasAbility && not busy && reachable
 --         Just t  -> assignTo t actor lvl tm
 --         Nothing -> tm
 
+updateReachable :: TaskManager -> Level -> TaskManager
+updateReachable tm lvl = tm & reachableBy .~ \_ t a -> Set.member (a ^. Actor.id, t ^. Task.id) reachable
+  where
+    reachable = go Set.empty idle
+
+    go :: Set (Identifier Actor,Identifier Task) -> [Identifier Actor] -> Set (Identifier Actor,Identifier Task)
+    go acc [] = acc
+    go acc (a:as) = let (actors,tasks) = floodFill lvl a
+                        acc' = foldr Set.insert acc [ (a',t) | a' <- actors, t <- tasks ]
+                    in go acc' (as \\ actors)
+    idle :: [Identifier Actor]
+    idle = map (^. Actor.id) (idleActors lvl tm)
+
+floodFill :: Level -> Identifier Actor -> ([Identifier Actor],[Identifier Task])
+floodFill _ _ = error "floodFill is undefined"
+
 assignTasks :: Level -> TaskManager -> TaskManager
-assignTasks lvl tm0 = chooseAssignments tm0 possibleAssignments
-  where chooseAssignments tm []             = tm
+assignTasks lvl tm00 = chooseAssignments tm0 possibleAssignments
+  where tm0 = updateReachable tm00 lvl
+        chooseAssignments tm []             = tm
         chooseAssignments tm ((a,t):tuples) =
           let tm' = assignTo t a lvl tm
           in chooseAssignments tm' $ filter (\(a',t') -> not (a == a' || t == t')) tuples
@@ -158,7 +176,7 @@ idleActors lvl tm = actors
 assignTo :: Task -> Actor -> Level -> TaskManager -> TaskManager
 assignTo task actor lvl
   = (inactive       %~ Set.delete task)
-  . (active         %~ insert (ActiveTask task $ _command task actor lvl))
+  . (active         %~ insert (ActiveTask task $ Task._command task actor lvl))
   . (taskAssignment %~ M.insert (actor ^. Actor.id) (task ^. Task.id))
   where
     insert = (:)
