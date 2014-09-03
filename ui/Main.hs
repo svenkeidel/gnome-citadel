@@ -17,11 +17,7 @@ import qualified Level.Task as LevelTask
 import           Renderable
 import           StaticElement (StaticElement)
 import           Task (Task)
-import           TaskManagement ( AbortedTask(..)
-                                , TaskManager
-                                , empty
-                                , addTask
-                                , assignTasks)
+import           TaskManagement (AbortedTask(..), TaskManager, addTask, assignTasks, empty)
 import qualified TaskManagement as TM
 import           TestHelper (createLevel)
 import           Tile (TileRepr(toTile))

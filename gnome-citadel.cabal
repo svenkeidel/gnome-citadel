@@ -71,7 +71,7 @@ test-suite specs
 
 benchmark a-star-bench
   type:             exitcode-stdio-1.0
-  hs-source-dirs:   bench
+  hs-source-dirs:   bench/astar
   main-is:          AStarBench.hs
   build-depends:    base,
                     criterion,
@@ -81,12 +81,13 @@ benchmark a-star-bench
 
 benchmark task-scheduling
   type:             exitcode-stdio-1.0
-  hs-source-dirs:   bench
+  hs-source-dirs:   bench/task-scheduling
   main-is:          TaskScheduling.hs
   build-depends:    base,
                     criterion,
                     gnome-citadel,
                     mtl,
-                    lens
+                    lens,
+                    deepseq
   ghc-options:      -Wall
                     -O2

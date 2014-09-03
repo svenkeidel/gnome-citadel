@@ -40,7 +40,6 @@ instance Show LevelError where
     "No suitable tool for " ++ show c
   show (OtherError s)  = "LevelError: " ++ s
 
-
 -- | move an actor or static element to an adjacent field
 move :: TileRepr t => t -> Coord -> LevelTrans
 move (toTile -> t) dest level =
@@ -60,7 +59,6 @@ mine actor block level =
           & staticElements %~ M.delete (block ^. StaticElement.id)
           & move actor blockCoords
   where blockCoords = view (coordOf block) level
-
 
 failOnMissingItem :: Actor -> StaticElement -> Coord -> LevelTrans
 failOnMissingItem actor item oldCoord level =

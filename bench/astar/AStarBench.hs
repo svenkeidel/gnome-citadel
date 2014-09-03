@@ -1,4 +1,4 @@
-module AStarBench where
+module Main where
 
 import Criterion.Main
 import Criterion.Types

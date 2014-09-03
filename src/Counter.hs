@@ -1,3 +1,4 @@
+{-# LANGUAGE GeneralizedNewtypeDeriving #-}
 module Counter ( Counter
                , Identifier(..)
                , freshId
@@ -8,7 +9,7 @@ import Data.Default
 import Control.DeepSeq (NFData,rnf)
 
 newtype Identifier a = Identifier Int
-  deriving (Eq, Ord, Show)
+  deriving (Eq, Ord, Show, Enum)
 
 instance NFData (Identifier a) where
   rnf (Identifier x) = rnf x

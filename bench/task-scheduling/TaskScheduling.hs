@@ -1,4 +1,4 @@
-module TaskScheduling where
+module Main where
 
 import           Control.Monad.Error
 import           Control.Monad.Writer
@@ -23,8 +23,10 @@ type TaskManagerStateE = Writer [AbortedTask] TaskManagerState
 
 main :: IO ()
 main = defaultMainWith config bs
-  where bs = [ bench "Gnome Citadel Level" $ nf (runLevel 1000) (mineAllWalls benchLevel empty)
-                                          ]
+     where bs = [ bench "Gnome Citadel Level" $ nf runLevel' empty ]
+           runLevel' :: TaskManager -> (TaskManagerState, [AbortedTask])
+           runLevel' = runLevel 10 . mineAllWalls benchLevel
+
 runLevel :: Int -> (Level, TaskManager) -> (TaskManagerState, [AbortedTask])
 runLevel n (lvl,tm) = runWriter $
     foldr1 (>=>) (replicate n executeGameStep') (lvl,tm)
@@ -48,7 +50,7 @@ findAllWalls lvl = catMaybes $ traverse findWall cs lvl
   where cs = [(cdx,cdy) | cdx <- [0..lvl^.bounds._1], cdy <- [0..lvl^.bounds._2]]
 
 mineAllWalls :: Level -> TaskManager -> (Level,TaskManager)
-mineAllWalls lvl tm = (lvl,foldl' (\tm' w -> addTask (LevelTask.mine w lvl (Identifier 0)) tm') tm (findAllWalls lvl))
+mineAllWalls lvl tm = (lvl,fst $ foldl' (\(tm',i) w -> (addTask (LevelTask.mine w lvl i) tm',succ i)) (tm,Identifier 0) (findAllWalls lvl))
 
 benchLevel :: Level
 benchLevel = createLevel . unlines $
