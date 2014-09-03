@@ -14,43 +14,43 @@ data-files:            tiles/*.png
 library
   hs-source-dirs:      src
   ghc-options:         -Wall -Werror
-  exposed-modules:     Tile,
-                       Task,
-                       Level,
-                       Level.Transformation,
-                       Level.Command,
-                       Level.Task,
-                       Actor,
-                       Counter,
-                       Renderable,
-                       StaticElement,
-                       Scheduler,
-                       Unfold,
-                       Queue,
-                       Coords,
-                       Path,
-                       Path.Internal,
-                       TaskManagement,
-                       Utils,
-                       TestHelper,
-                       TestTiles
-  Build-depends:       base ==4.*,
-                       containers,
-                       lens >= 4.4 && < 4.5,
-                       mtl,
-                       PSQueue,
-                       transformers == 0.3.*,
-                       data-default,
-                       deepseq
+  exposed-modules:     Actor
+                     , Coords
+                     , Counter
+                     , Level
+                     , Level.Command
+                     , Level.Task
+                     , Level.Transformation
+                     , Path
+                     , Path.Internal
+                     , Queue
+                     , Renderable
+                     , Scheduler
+                     , StaticElement
+                     , Task
+                     , TaskManagement
+                     , TestHelper
+                     , TestTiles
+                     , Tile
+                     , Unfold
+                     , Utils
+  Build-depends:       PSQueue
+                     , base ==4.*
+                     , containers
+                     , data-default
+                     , deepseq
+                     , lens >= 4.4 && < 4.5
+                     , mtl
+                     , transformers == 0.3.*
 
 executable gnome-citadel
   hs-source-dirs:      ui, test
   ghc-options:         -Wall -threaded
-  Build-depends:       base ==4.*,
-                       gnome-citadel,
-                       vty >= 5.2 && < 5.3,
-                       lens >= 4.4 && < 4.5,
-                       data-default
+  Build-depends:       base ==4.*
+                     , data-default
+                     , gnome-citadel
+                     , lens >= 4.4 && < 4.5
+                     , vty >= 5.2 && < 5.3
   main-is:             Main.hs
 
 test-suite specs
@@ -58,24 +58,24 @@ test-suite specs
   ghc-options:         -Wall
   hs-source-dirs:      test
   main-is:             Spec.hs
-  build-depends:       base ==4.*,
-                       containers,
-                       hspec >= 1.9,
-                       gnome-citadel,
-                       QuickCheck,
-                       mtl,
-                       lens >= 4.4 && < 4.5,
-                       transformers == 0.3.*,
-                       data-default == 0.5.*,
-                       PSQueue == 1.1.*
+  build-depends:       PSQueue == 1.1.*
+                     , QuickCheck
+                     , base ==4.*
+                     , containers
+                     , data-default == 0.5.*
+                     , gnome-citadel
+                     , hspec >= 1.9
+                     , lens >= 4.4 && < 4.5
+                     , mtl
+                     , transformers == 0.3.*
 
 benchmark a-star-bench
   type:             exitcode-stdio-1.0
   hs-source-dirs:   bench/astar
   main-is:          AStarBench.hs
-  build-depends:    base,
-                    criterion,
-                    gnome-citadel
+  build-depends:    base
+                  , criterion
+                  , gnome-citadel
   ghc-options:      -Wall
                     -O2
 
@@ -83,11 +83,11 @@ benchmark task-scheduling
   type:             exitcode-stdio-1.0
   hs-source-dirs:   bench/task-scheduling
   main-is:          TaskScheduling.hs
-  build-depends:    base,
-                    criterion,
-                    gnome-citadel,
-                    mtl,
-                    lens,
-                    deepseq
+  build-depends:    base
+                  , criterion
+                  , deepseq
+                  , gnome-citadel
+                  , lens
+                  , mtl
   ghc-options:      -Wall
                     -O2
