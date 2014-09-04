@@ -117,10 +117,7 @@ findPath current = do
                                then return Nothing
                                else action
 
-visitAndExpand :: ( Applicative m
-                  , MonadState PathFinderState m
-                  , MonadReader PathFinderConfig m
-                  ) => Coord -> m ()
+visitAndExpand :: Coord -> PathFinder ()
 visitAndExpand c = visit c >> expand c >>= analyzeNbs c
 
 reconstructPath :: Coord -> PredecessorMap -> Maybe Path
@@ -136,18 +133,13 @@ reconstructPath finish pmap = do
       Just (_, Just predec) -> current : go predec
       Just (_, Nothing) -> [current]
 
-nodesLeftToExpand :: (Functor m, MonadState PathFinderState m) => m Int
+nodesLeftToExpand :: PathFinder Int
 nodesLeftToExpand = PSQ.size <$> use open
 
-expand :: ( Applicative m
-          , MonadReader PathFinderConfig m
-          ) => Coord -> m [Coord]
+expand :: Coord -> PathFinder [Coord]
 expand coord = filter <$> view canBeWalked <*> (view neighbors <*> pure coord)
 
-analyzeNb :: ( Applicative m
-             , MonadReader PathFinderConfig m
-             , MonadState PathFinderState m
-             ) => Coord -> Coord -> m ()
+analyzeNb :: Coord -> Coord -> PathFinder ()
 analyzeNb predecessor nb = do
   alreadySeen <- alreadyVisited nb
   costSoFar <- costFor predecessor
@@ -159,19 +151,13 @@ analyzeNb predecessor nb = do
       when (isJust newCost) $
         open %= insertIfNotPresent nb (fromJust newCost + heuristicValue)
 
-analyzeNbs :: ( Applicative m
-              , MonadReader PathFinderConfig m
-              , MonadState PathFinderState m
-              ) => Coord -> [Coord] -> m ()
+analyzeNbs :: Coord -> [Coord] -> PathFinder ()
 analyzeNbs predecessor = mapM_ (analyzeNb predecessor)
 
-costFor :: ( Functor m
-           , MonadState PathFinderState m
-           ) => Coord -> m (Maybe WayCost)
+costFor :: Coord -> PathFinder (Maybe WayCost)
 costFor c = (fmap . fmap) fst $ Map.lookup c <$> use seen
 
-mayUpdateCost :: (Functor m, MonadState PathFinderState m) =>
-              Maybe WayCost -> Coord -> Coord -> m ()
+mayUpdateCost :: Maybe WayCost -> Coord -> Coord -> PathFinder ()
 mayUpdateCost Nothing _ _ = return ()
 mayUpdateCost (Just cost) target origin = do
   previous <- costFor target
@@ -188,8 +174,8 @@ insertIfNotPresent key prio queue =
     Just _ -> queue
     Nothing -> PSQ.insert key prio queue
 
-visit :: MonadState PathFinderState m => Coord -> m ()
+visit :: Coord -> PathFinder ()
 visit c = closed %= Set.insert c
 
-alreadyVisited :: (Functor m, MonadState PathFinderState m) => Coord -> m Bool
+alreadyVisited :: Coord -> PathFinder Bool
 alreadyVisited c = Set.member c <$> use closed
