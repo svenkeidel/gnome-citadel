@@ -1,5 +1,6 @@
 {-# LANGUAGE TemplateHaskell, GeneralizedNewtypeDeriving, FlexibleContexts #-}
 module Path.Internal ( findPath
+                     , floodUntil
                      , expand
                      , visit
                      , analyzeNbs
@@ -23,28 +24,33 @@ module Path.Internal ( findPath
                      , Path (Path)
                      , pathLength
                      , pathCoords
+
+                     , PredecessorMap
                      ) where
 
-import Control.Lens (view, (%=), use, (.=))
-import Control.Lens.TH
-import Control.DeepSeq (NFData (rnf))
-import Data.Default
-import Data.Maybe (isJust,fromJust)
-import Control.Applicative (Applicative, (<*>),(<$>),pure)
-
-import Control.Monad(when, unless)
-
-import Control.Monad.Trans.Reader (ReaderT, runReaderT)
-import Control.Monad.Trans.State (StateT, runStateT)
-import Control.Monad.Identity (Identity, runIdentity)
-import Control.Monad.Reader.Class
-import Control.Monad.State.Class
-
+import           Control.Applicative (Applicative, (<*>),(<$>),pure)
+import           Control.DeepSeq (NFData (rnf))
+import           Control.Lens (view, use)
+import           Control.Lens.Operators
+import           Control.Lens.TH
+import           Control.Monad (when, unless)
+import           Control.Monad.Identity (Identity, runIdentity)
+import           Control.Monad.Reader.Class
+import           Control.Monad.State.Class
+import           Control.Monad.Trans.Reader (ReaderT, runReaderT)
+import           Control.Monad.Trans.State (StateT, runStateT)
+import           Data.Default
+import           Data.Foldable (traverse_)
+import           Data.Map (Map)
 import qualified Data.Map as Map
-import qualified Data.Set as Set
+import           Data.Maybe (isJust,fromJust)
+import           Data.PSQueue (Binding((:->)))
 import qualified Data.PSQueue as PSQ
+import           Data.Set (Set)
+import qualified Data.Set as Set
 
-import Coords
+import           Coords
+import           Utils (unlessM)
 
 type HeuristicScore = Double
 type WayCost = Double
@@ -57,8 +63,8 @@ makeLenses ''Path
 instance NFData Path where
   rnf (Path l cs) = l `seq` cs `seq` ()
 
-type PredecessorMap = Map.Map Coord (WayCost,Maybe Coord)
-data PathFinderState = PathFinderState { _closed :: Set.Set Coord
+type PredecessorMap = Map Coord (WayCost,Maybe Coord)
+data PathFinderState = PathFinderState { _closed :: Set Coord
                                        , _open :: PSQ.PSQ Coord HeuristicScore
                                        , _seen :: PredecessorMap
                                        }
@@ -99,6 +105,15 @@ evalPathFinder :: PathFinderConfig ->
                   a
 evalPathFinder c st a = fst $ runPathFinder c st a
 
+floodUntil :: (PredecessorMap -> Bool) -> Coord -> PathFinder ()
+floodUntil abort current = do
+  unlessM (use seen <&> abort) $ do
+    visitAndExpand current
+    nodesLeft <- nodesLeftToExpand
+    when (nodesLeft > 0) $ do
+      maybeMin <- extractNextMinFromQueue
+      traverse_ (floodUntil abort) maybeMin
+
 findPath :: Coord -> PathFinder (Maybe Path)
 findPath current = do
   goalReached <- view isGoal <*> pure current
@@ -108,14 +123,24 @@ findPath current = do
       visitAndExpand current
       nodesLeft <- nodesLeftToExpand
       ifGreaterZero nodesLeft $ do
-        Just (nextMin PSQ.:-> _, queue) <- PSQ.minView <$> use open
-        open .= queue
-        findPath nextMin
+        maybeMin <- extractNextMinFromQueue
+        case maybeMin of
+          Just m -> findPath m
+          Nothing -> return Nothing
   where
     ifGreaterZero :: Monad m => Int -> m (Maybe a) -> m (Maybe a)
     ifGreaterZero n action = if n == 0
                                then return Nothing
                                else action
+
+extractNextMinFromQueue :: PathFinder (Maybe Coord)
+extractNextMinFromQueue = do
+  maybeMinQueue <- PSQ.minView <$> use open
+  case maybeMinQueue of
+    Just (nextMin :-> _, queue) -> do
+      open .= queue
+      return $ Just nextMin
+    Nothing -> return Nothing
 
 visitAndExpand :: Coord -> PathFinder ()
 visitAndExpand c = visit c >> expand c >>= analyzeNbs c
