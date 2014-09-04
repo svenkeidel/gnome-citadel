@@ -74,7 +74,7 @@ benchmark a-star-bench
   hs-source-dirs:   bench/astar
   main-is:          AStarBench.hs
   build-depends:    base == 4.*
-                  , criterion >= 1.0 && < 1.1
+                  , criterion >= 1.0.1 && < 1.1
                   , gnome-citadel
   ghc-options:      -Wall
                     -O2
@@ -84,7 +84,7 @@ benchmark task-scheduling
   hs-source-dirs:   bench/task-scheduling
   main-is:          TaskScheduling.hs
   build-depends:    base == 4.*
-                  , criterion >= 1.0 && < 1.1
+                  , criterion >= 1.0.1 && < 1.1
                   , gnome-citadel
                   , lens >= 4.4 && < 4.5
                   , mtl >= 2.1 && < 2.3
