@@ -96,16 +96,6 @@ empty = TaskManager { _inactive       = def
                     , _reachableBy    = undefined
                     }
 
-{-isReachableBy :: Level -> Task -> Actor -> Bool-}
-{-isReachableBy lvl task actor = isJust maybePath-}
-  {-where  actorCoord = lvl ^. coordOfTile actor-}
-         {-targetCoord = task ^. Task.target-}
-         {-maybePath = findArea actorCoord destCoords lvl-}
-         {-destCoords = if isWalkable targetCoord lvl-}
-                      {-then [targetCoord]-}
-                      {-else filter (`isWalkable` lvl) (neighbors2d targetCoord)-}
-
-
 addTaskE :: Either e Task -> TaskManager -> Either e TaskManager
 addTaskE task tm = case task of
                      Left e -> Left e
@@ -123,19 +113,8 @@ canBeDoneBy tm actor task = hasAbility && not busy && isReachable == Reachable
     hasAbility = actor ^. Actor.abilities . contains (task ^. Task.taskType)
     isReachable  = _reachableBy tm task actor
 
--- bestJobFor :: Actor -> Level -> TaskManager -> Maybe Task
--- bestJobFor actor lvl tm = minimumByOf folded (comparing $ distanceToTask actor)
---                         $ Set.filter (canBeDoneBy lvl tm actor) (tm ^. inactive)
---   where
 
 
--- assignTasks :: Level -> TaskManager -> TaskManager
--- assignTasks lvl tm0 = foldl go tm0 (idleActors lvl tm0)
---   where
---     go tm actor =
---       case bestJobFor actor lvl tm of
---         Just t  -> assignTo t actor lvl tm
---         Nothing -> tm
 
 reachable :: TaskManager -> Level -> Task -> Actor -> Reachable
 reachable tm lvl task actor =
@@ -183,7 +162,6 @@ idleActors lvl tm = actors
     isBusy :: Identifier Actor -> Bool
     isBusy actor = M.member actor $ tm ^. taskAssignment
     actors = M.foldlWithKey' (\as k a -> if isBusy k then as else a :as) [] (lvl ^. Level.actors)
-      -- M.elems . M.filterWithKey (\k _ -> isBusy k) $ (lvl ^. Level.actors)
 
 -- | Assign the given task to the given actor and add the appropriate
 -- command to the command scheduler.
