@@ -4,6 +4,7 @@ module TaskManagement ( TaskManager
                       , Reachable(..)
                       , empty
                       , reachableBy
+                      , calculateReachable
                       , reachable
                       , active
                       , inactive
@@ -113,22 +114,27 @@ canBeDoneBy tm actor task = hasAbility && not busy && isReachable == Reachable
     hasAbility = actor ^. Actor.abilities . contains (task ^. Task.taskType)
     isReachable  = _reachableBy tm task actor
 
+toIsReachable :: Bool -> Reachable
+toIsReachable True = Reachable
+toIsReachable False = Unreachable
 
+type ReachableRelation = Set (Identifier Actor,Identifier Task)
 
+reachable :: ReachableRelation -> Task -> Actor -> Reachable
+reachable reachableRel task actor = actor `canReach` task
+  where actor' `canReach` task' =
+          toIsReachable $ Set.member (actor' ^. Actor.id, task' ^. Task.id) reachableRel
 
-reachable :: TaskManager -> Level -> Task -> Actor -> Reachable
-reachable tm lvl task actor =
-  if Set.member (actor ^. Actor.id, task ^. Task.id) (go Set.empty idle)
-  then Reachable
-  else Unreachable
-  where
-    go :: Set (Identifier Actor,Identifier Task) -> [Identifier Actor] -> Set (Identifier Actor,Identifier Task)
-    go acc [] = acc
-    go acc (a:as) = let (actors,tasks) = floodFill lvl (tm ^. inactive) a
-                        acc' = foldr Set.insert acc [ (a',t) | a' <- actors, t <- tasks ]
-                    in go acc' (as \\ actors)
-    idle :: [Identifier Actor]
-    idle = map (^. Actor.id) (idleActors lvl tm)
+calculateReachable :: TaskManager -> Level -> ReachableRelation
+calculateReachable tm lvl = go Set.empty idle
+  where go :: Set (Identifier Actor,Identifier Task) -> [Identifier Actor] -> Set (Identifier Actor,Identifier Task)
+        go acc [] = acc
+        go acc (a:as) = go acc' (as \\ actors)
+          where (actors,tasks) = floodFill lvl (tm ^. inactive) a
+                acc' = foldr Set.insert acc [ (a',t) | a' <- actors, t <- tasks ]
+        idle :: [Identifier Actor]
+        idle = map (^. Actor.id) (idleActors lvl tm)
+
 
 floodFill :: Level -> Set Task -> Identifier Actor -> ([Identifier Actor],[Identifier Task])
 floodFill lvl ts actorId = (Set.toList actors,Set.toList tasks)
@@ -143,7 +149,8 @@ floodFill lvl ts actorId = (Set.toList actors,Set.toList tasks)
 
 assignTasks :: Level -> TaskManager -> TaskManager
 assignTasks lvl tm00 = chooseAssignments tm0 possibleAssignments
-  where tm0 = set reachableBy (reachable tm00 lvl) tm00
+  where tm0 = set reachableBy (reachable reachableRel) tm00
+        reachableRel = calculateReachable tm00 lvl
         chooseAssignments tm []             = tm
         chooseAssignments tm ((a,t):tuples) =
           let tm' = assignTo t a lvl tm

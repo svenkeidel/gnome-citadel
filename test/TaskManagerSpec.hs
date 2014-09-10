@@ -49,7 +49,7 @@ spec = describe "The TaskManager" $ do
         task = LevelTask.mine (findWall lvl (1,1)) lvl (Identifier 1)
         tm = addTask task empty
         dwarf = findDwarf lvl 'm'
-    reachable tm lvl task dwarf `shouldBe` Reachable
+    reachable (calculateReachable tm lvl) task dwarf `shouldBe` Reachable
 
   it "can deduce if the given task is not reachable by a dwarf" $ do
     let lvl = createLevel $ unlines [ "  #  "
@@ -59,7 +59,7 @@ spec = describe "The TaskManager" $ do
         task = LevelTask.mine (findWall lvl (3,1)) lvl (Identifier 1)
         tm = addTask task empty
         dwarf = findDwarf lvl 'm'
-    reachable tm lvl task dwarf `shouldBe` Unreachable
+    reachable (calculateReachable tm lvl) task dwarf `shouldBe` Unreachable
 
   context "when adding tasks" $ do
 
