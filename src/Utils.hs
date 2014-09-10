@@ -4,6 +4,7 @@ module Utils ( runInState
              , fromRight
              , ($$)
              , applyAll
+             , unlessM
              ) where
 
 import           Control.Lens ((^.))
@@ -47,3 +48,8 @@ infixr 0 $$
 
 applyAll :: DF.Foldable t => t (a -> a) -> a -> a
 applyAll = ($$)
+
+unlessM :: Monad m => m Bool -> m () -> m ()
+unlessM mb ma = do
+  b <- mb
+  if not b then ma else return ()
