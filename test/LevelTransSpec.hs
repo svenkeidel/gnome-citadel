@@ -21,10 +21,10 @@ spec = describe "A Level Transformation" $ do
                       , " # "
                       , "m  "
                       ]
-      dwarf' = findDwarf 'm' level
-      wall'  = findWall (1, 0) level
+      dwarf' = findDwarf level 'm'
+      wall'  = findWall level (1, 0)
       move' coord = ErrorT . return . move dwarf' (from2d coord)
-      mine' coord = ErrorT . return . mine dwarf' (findWall coord level)
+      mine' coord = ErrorT . return . mine dwarf' (findWall level coord)
       failOnMissingItem' coord = ErrorT . return . failOnMissingItem dwarf' wall' (from2d coord)
 
   describe "A Move" $ do

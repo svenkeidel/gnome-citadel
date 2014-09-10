@@ -44,7 +44,7 @@ instance Show LevelError where
 move :: TileRepr t => t -> Coord -> LevelTrans
 move (toTile -> t) dest level =
   if isWalkable dest level
-  then return $ level & coordOf t .~ dest
+  then return $ level & coordOfTile t .~ dest
   else throwError $ PathBlocked t dest
 
 -- | removes the item from the map and places it in the inventory of the actor
@@ -58,7 +58,7 @@ mine actor block level =
     level & deleteFromCoords block
           & staticElements %~ M.delete (block ^. StaticElement.id)
           & move actor blockCoords
-  where blockCoords = view (coordOf block) level
+  where blockCoords = view (coordOfTile block) level
 
 failOnMissingItem :: Actor -> StaticElement -> Coord -> LevelTrans
 failOnMissingItem actor item oldCoord level =
@@ -66,5 +66,5 @@ failOnMissingItem actor item oldCoord level =
      then return level
      else throwError $ ItemMissing actor item oldCoord
   where
-    actualCoord = view (coordOf item) level
+    actualCoord = view (coordOfTile item) level
     itemPresent = oldCoord == actualCoord

@@ -41,7 +41,7 @@ approach dest actor lvl =
     Just path -> DF.foldMap (return . T.move actor) (path ^. pathCoords . _tail)
     Nothing   -> return (const . throwError $ PathNotFound fromCoord dest)
   where
-    fromCoord  = lvl ^. coordOf actor
+    fromCoord  = lvl ^. coordOfTile actor
     maybePath  = findArea fromCoord destCoords lvl
     destCoords = if isWalkable dest lvl
                  then [dest]
@@ -54,7 +54,7 @@ pickup item actor lvl =
     , return $ T.failOnMissingItem actor item itemCoord
              >> T.pickup actor item
     ]
-  where itemCoord = lvl ^. coordOf item
+  where itemCoord = lvl ^. coordOfTile item
 
 mine :: StaticElement -> Actor -> Level -> Command
 mine block actor lvl =
@@ -62,13 +62,13 @@ mine block actor lvl =
     [ if minerHasTool
         then mempty
         else
-           case findTool Mining (lvl ^. coordOf actor) lvl of
+           case findTool Mining (lvl ^. coordOfTile actor) lvl of
              Just t  -> pickup t actor lvl
              Nothing -> return $ const . throwError $ T.ToolMissing Mining
     , approach blockCoord actor lvl
     , return $ T.failOnMissingItem actor block blockCoord
              >> T.mine actor block
     ]
-  where blockCoord = lvl ^. coordOf block
+  where blockCoord = lvl ^. coordOfTile block
         minerHasTool :: Bool
         minerHasTool = actorInventory lvl actor ^? folded . category . contains Mining ^. non False

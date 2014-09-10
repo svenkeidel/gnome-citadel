@@ -3,6 +3,9 @@ module Path ( searchPath
             , pathCost
             , defaultPath
             , findArea
+
+            , ContinueFlooding(..)
+            , continueIf
             , floodUntil
 
             , Path (Path)
@@ -19,7 +22,7 @@ import qualified Data.Map as Map
 import qualified Data.PSQueue as PSQ
 
 import Coords
-import Path.Internal (Path, PathFinderState, PredecessorMap)
+import Path.Internal (Path, PathFinderState, PredecessorMap, ContinueFlooding(..))
 import qualified Path.Internal as P
 
 searchPath :: (Coord -> Bool)            -- ^ Check if coord is allowed
@@ -64,7 +67,11 @@ findArea walkable start goals =
     heuristic :: Coord -> Double
     heuristic coord = minimum $ map (distance coord) goals
 
-floodUntil :: (PredecessorMap -> Bool) -> (Coord -> Bool) -> Coord -> PredecessorMap
+continueIf :: Bool -> ContinueFlooding
+continueIf True = Continue
+continueIf False = Abort
+
+floodUntil :: (PredecessorMap -> ContinueFlooding) -> (Coord -> Bool) -> Coord -> PredecessorMap
 floodUntil p walkable start =
   view P.seen . P.execPathFinder config (initState start) $ P.floodUntil p start
   where config = P.PathFinderConfig walkable (const 1) distance neighbors2d (const False)

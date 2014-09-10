@@ -40,6 +40,27 @@ spec = describe "The TaskManager" $ do
       assignTask' lvl' task' = let taskManagerWithTask = addTask task' empty
                                in assignTasks lvl' taskManagerWithTask
 
+
+  it "can deduce if the given task is reachable by a dwarf" $ do
+    let lvl = createLevel $ unlines [ "  #  "
+                                    , " ##  "
+                                    , "m #  "
+                                    ]
+        task = LevelTask.mine (findWall lvl (1,1)) lvl (Identifier 1)
+        tm = addTask task empty
+        dwarf = findDwarf lvl 'm'
+    reachable tm lvl task dwarf `shouldBe` Reachable
+
+  it "can deduce if the given task is not reachable by a dwarf" $ do
+    let lvl = createLevel $ unlines [ "  #  "
+                                    , "  ## "
+                                    , "m #  "
+                                    ]
+        task = LevelTask.mine (findWall lvl (3,1)) lvl (Identifier 1)
+        tm = addTask task empty
+        dwarf = findDwarf lvl 'm'
+    reachable tm lvl task dwarf `shouldBe` Unreachable
+
   context "when adding tasks" $ do
 
     it "cannot be assigned to a incompatible dwarf" $ do
@@ -48,8 +69,8 @@ spec = describe "The TaskManager" $ do
                                       , "c  "
                                       ]
           taskManagerAssigned = assignTask' lvl task
-          task = LevelTask.mine (findWall (1,0) lvl) lvl (Identifier 1)
-          dwarf = findDwarf 'c' lvl
+          task = LevelTask.mine (findWall lvl (1,0)) lvl (Identifier 1)
+          dwarf = findDwarf lvl 'c'
       taskManagerAssigned `shouldSatisfy` not . isAssignedTo task dwarf
 
     it "cannot be assigned if dwarf cannot reach task location" $ do
@@ -59,8 +80,8 @@ spec = describe "The TaskManager" $ do
                                       , "m  "
                                       ]
           taskManagerAssigned = assignTask' lvl task
-          task = LevelTask.mine (findWall (1,0) lvl) lvl (Identifier 1)
-          dwarf = findDwarf 'm' lvl
+          task = LevelTask.mine (findWall lvl (1,0)) lvl (Identifier 1)
+          dwarf = findDwarf lvl 'm'
       taskManagerAssigned `shouldSatisfy` not . isAssignedTo task dwarf
 
     it "gets assigned to the nearest dwarf" $ do
@@ -70,9 +91,9 @@ spec = describe "The TaskManager" $ do
                                       , "m  "
                                       ]
           taskManagerAssigned = assignTask' lvl task
-          task = LevelTask.mine (findWall (1,0) lvl) lvl (Identifier 1)
-          dwarfLowerLeft = findDwarfByCoord (from2d (0,3)) lvl
-          dwarfUpperRight = findDwarfByCoord (from2d (2,1)) lvl
+          task = LevelTask.mine (findWall lvl (1,0)) lvl (Identifier 1)
+          dwarfLowerLeft = findDwarfByCoord lvl (from2d (0,3))
+          dwarfUpperRight = findDwarfByCoord lvl (from2d (2,1))
       taskManagerAssigned `shouldSatisfy` isAssignedTo task dwarfUpperRight
       taskManagerAssigned `shouldSatisfy` not . isAssignedTo task dwarfLowerLeft
 
@@ -81,9 +102,9 @@ spec = describe "The TaskManager" $ do
                                       , " # "
                                       , "m  "
                                       ]
-          task = LevelTask.mine (findWall (1,0) lvl) lvl (Identifier 1)
+          task = LevelTask.mine (findWall lvl (1,0)) lvl (Identifier 1)
           taskManagerAssigned = assignTask' lvl task
-          dwarf = findDwarf 'm' lvl
+          dwarf = findDwarf lvl 'm'
       taskManagerAssigned `shouldSatisfy` isAssignedTo task dwarf
 
     it "gets not assigned if suitable tool not available" $ do
@@ -92,9 +113,9 @@ spec = describe "The TaskManager" $ do
                                       , " # "
                                       , "m  "
                                       ]
-          task = LevelTask.mine (findWall (1,0) lvl) lvl (Identifier 1)
+          task = LevelTask.mine (findWall lvl (1,0)) lvl (Identifier 1)
           taskManagerAssigned = assignTask' lvl task
-          dwarf = findDwarf 'm' lvl
+          dwarf = findDwarf lvl 'm'
       taskManagerAssigned `shouldSatisfy` not . isAssignedTo task dwarf
 
     it "gets assigned to a dwarf and executed" $ do
@@ -102,7 +123,7 @@ spec = describe "The TaskManager" $ do
                                                , " # "
                                                , "m  "
                                                ]
-          task = LevelTask.mine (findWall (1,0) lvl) lvl (Identifier 1)
+          task = LevelTask.mine (findWall lvl (1,0)) lvl (Identifier 1)
           taskManagerAssigned = assignTask' lvl task
       e <- execWriterT $ gameStepShouldChangeLevelTo [ "## "
                                                      , "m# "
@@ -127,9 +148,9 @@ spec = describe "The TaskManager" $ do
                                                , " # "
                                                , "m  "
                                                ]
-          task = LevelTask.mine (findWall (1,0) lvl) lvl (Identifier 1)
+          task = LevelTask.mine (findWall lvl (1,0)) lvl (Identifier 1)
           taskManagerAssigned = assignTask' lvl task
-          dwarf = findDwarf 'm' lvl
+          dwarf = findDwarf lvl 'm'
 
       ((_,tm'),e) <- runWriterT $
         foldr1 (>=>) (replicate 10 executeGameStep') (lvl,taskManagerAssigned)
@@ -148,8 +169,8 @@ spec = describe "The TaskManager" $ do
                                                ,"        "
                                                ,"  m  m  "
                                                ]
-          task1 = LevelTask.mine (findWall (2,0) lvl) lvl (Identifier 1)
-          task2 = LevelTask.mine (findWall (5,0) lvl) lvl (Identifier 2)
+          task1 = LevelTask.mine (findWall lvl (2,0)) lvl (Identifier 1)
+          task2 = LevelTask.mine (findWall lvl (5,0)) lvl (Identifier 2)
           taskManagerAssigned = assignTasks lvl $ addTask task2 $ addTask task1 empty
 
       ((_,tm'),e) <- runWriterT $

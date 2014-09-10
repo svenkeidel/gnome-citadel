@@ -28,7 +28,7 @@ createLevel :: String -> Level
 createLevel lvlString = lvl & walkable .~ walkableFunction
   where
     lvl = fst $ fromString levelBuilder lvlString def
-    walkableFunction level coord = everythingWalkable (staticElementsAt coord level)
+    walkableFunction level coord = everythingWalkable (staticElementsAt level coord)
                                    && inBounds coord level
     everythingWalkable :: [StaticElement] -> Bool
     everythingWalkable = allOf folded (is _Walkable . view S.walkable)
@@ -52,15 +52,15 @@ levelBuilder ident char =
     'x' -> Just $ Right $ T.pickaxe (asIdentifierOf ident)
     _   -> error ("unrecognized char " ++ show char)
 
-findDwarf :: Char -> Level -> Actor
-findDwarf c = head . findActor (\a -> render (toTile a) == c)
+findDwarf :: Level -> Char -> Actor
+findDwarf lvl c = head $ findActor (\a -> render (toTile a) == c) lvl
 
-findDwarfByCoord :: Coord -> Level -> Actor
-findDwarfByCoord c = head . actorsAt c
+findDwarfByCoord :: Level -> Coord -> Actor
+findDwarfByCoord lvl c = head $ actorsAt lvl c
 
-findWall :: (Int, Int) -> Level -> StaticElement
-findWall c lvl = head $ findStaticElement (\t -> render (toTile t) == '#'
-                                                 && lvl ^. coordOf t  == from2d c) lvl
+findWall :: Level -> (Int, Int) -> StaticElement
+findWall lvl c = head $ findStaticElement (\t -> render (toTile t) == '#'
+                                              && lvl ^. coordOfTile t  == from2d c) lvl
 
 isRight :: Either a b -> Bool
 isRight (Right _) = True

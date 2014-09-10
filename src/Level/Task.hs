@@ -15,11 +15,11 @@ import           Level.Transformation
 mine :: StaticElement -> Level -> Identifier Task -> Task
 mine s lvl i = Task
              { _id = i
-             , _target = lvl ^. coordOf s
+             , _target = lvl ^. coordOfTile s
              , _taskType = Mine
              , _command = \dwarf lvl' -> Command.mine s dwarf lvl' `catch` handler
              , _precondition = \lvl' actor ->
-                 mconcat [ unless (isReachable (lvl' ^. coordOf s) lvl')
+                 mconcat [ unless (isReachable (lvl' ^. coordOfTile s) lvl')
                             "Mining target is unreachable"
                          , unless (holdsSuitableTool lvl' actor Mining)
                            "Actor holds no suitable tool for Mining"

@@ -1,10 +1,12 @@
 {-# LANGUAGE TemplateHaskell, GeneralizedNewtypeDeriving, FlexibleContexts #-}
 module Path.Internal ( findPath
-                     , floodUntil
                      , expand
                      , visit
                      , analyzeNbs
                      , reconstructPath
+
+                     , ContinueFlooding(..)
+                     , floodUntil
 
                      , PathFinderState (PathFinderState)
                      , closed
@@ -50,7 +52,8 @@ import           Data.Set (Set)
 import qualified Data.Set as Set
 
 import           Coords
-import           Utils (unlessM)
+
+import           Utils(unlessM)
 
 type HeuristicScore = Double
 type WayCost = Double
@@ -105,14 +108,27 @@ evalPathFinder :: PathFinderConfig ->
                   a
 evalPathFinder c st a = fst $ runPathFinder c st a
 
-floodUntil :: (PredecessorMap -> Bool) -> Coord -> PathFinder ()
-floodUntil abort current = do
-  unlessM (use seen <&> abort) $ do
-    visitAndExpand current
-    nodesLeft <- nodesLeftToExpand
-    when (nodesLeft > 0) $ do
-      maybeMin <- extractNextMinFromQueue
-      traverse_ (floodUntil abort) maybeMin
+data ContinueFlooding = Continue | Abort deriving (Eq,Show)
+
+floodUntil :: (PredecessorMap -> ContinueFlooding) -> Coord -> PathFinder ()
+floodUntil abort current =
+  unlessM (use seen <&> abort <&> (== Abort)) $ do
+    currentIsWalkable <- view canBeWalked <*> pure current
+    if (not currentIsWalkable)
+      then do
+        nodesLeft <- nodesLeftToExpand
+        when (nodesLeft > 0) $ do
+          maybeMin <- extractNextMinFromQueue
+          traverse_ (floodUntil abort) maybeMin
+      else do
+        visitNeighbours current
+        nodesLeft <- nodesLeftToExpand
+        when (nodesLeft > 0) $ do
+          maybeMin <- extractNextMinFromQueue
+          traverse_ (floodUntil abort) maybeMin
+
+  where
+    visitNeighbours c = visit c >> (view neighbors ?? c) >>= analyzeNbs c
 
 findPath :: Coord -> PathFinder (Maybe Path)
 findPath current = do

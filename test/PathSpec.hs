@@ -9,7 +9,6 @@ import qualified Data.PSQueue as PSQ
 import           Path
 import           Path.Internal hiding (floodUntil)
 import           Test.Hspec
-import Debug.Trace (traceShowM)
 
 import           Control.Lens
 
@@ -257,21 +256,21 @@ spec = describe "Path finding functionality" $ do
         allowed (Coord x y _) = x `elem` [0..5] && y `elem` [0..5]
 
     it "should visit all coords when flooding unconditionally" $ do
-      let pmap = floodUntil (const False) allowed start
-      Map.size pmap `shouldBe` 36
+      let pmap = floodUntil (const Continue) allowed start
+      Map.size pmap `shouldBe` 64
 
     it "should stop immediately if the given predicate is always true" $ do
-      let pmap = floodUntil (const True) allowed start
+      let pmap = floodUntil (const Abort) allowed start
       Map.size pmap `shouldBe` 1
 
     it "should stop if the given predicate is true" $ do
-      let pmap = floodUntil ((> 5) . Map.size) allowed start
+      let pmap = floodUntil (continueIf . not . (> 5) . Map.size) allowed start
       Map.size pmap `shouldSatisfy` (> 5)
       Map.size pmap `shouldBe` 9
 
     it "should explore disjoint regions respecting blocked coords" $ do
        let allowed' c@(Coord _ y _) = y /= 3 && allowed c
-           pmap = floodUntil (const False) allowed' start
-       Map.size pmap `shouldBe` 18
+           pmap = floodUntil (const Continue) allowed' start
+       Map.size pmap `shouldBe` 40
        Map.member (from2d (2,4)) pmap `shouldBe` False
        Map.member (from2d (2,1)) pmap `shouldBe` True

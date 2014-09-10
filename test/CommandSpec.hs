@@ -28,7 +28,7 @@ spec = describe "An Execution" $ do
                                              , " # "
                                              , "m  "
                                              ]
-      dwarf' = findDwarf 'm' level
+      dwarf' = findDwarf level 'm'
 
       executeGameStep' :: SchedulerState -> SchedulerStateE
       executeGameStep' (lvl,com) =
@@ -93,7 +93,7 @@ spec = describe "An Execution" $ do
 
   describe "A Mining Command" $
     it "should approach the mining location, to remove the field and place the actor on top" $ do
-      let wall = findWall (1,0) level
+      let wall = findWall level (1,0)
       e <- runErrorT $
         gameStepShouldChangeLevelTo [ "## "
                                     , "m# "

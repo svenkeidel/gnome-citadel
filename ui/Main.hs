@@ -117,7 +117,7 @@ abortedTaskMessages = map (\(AbortedTask _ msg) -> msg)
 
 findWall :: (Int, Int) -> Level -> Maybe StaticElement
 findWall c lvl = preview _head . flip findStaticElement lvl $ \t ->
-  render (toTile t) == '#' && lvl ^. coordOf t  == from2d c
+  render (toTile t) == '#' && lvl ^. coordOfTile t  == from2d c
 
 findAllWalls :: Level -> [StaticElement]
 findAllWalls lvl = catMaybes $ traverse findWall cs lvl

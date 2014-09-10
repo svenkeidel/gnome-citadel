@@ -14,6 +14,7 @@ module Level ( Level (..)
              , actorsAt
              , staticElementsAt
              , coordOf
+             , coordOfTile
              , findPath
              , findArea
              , findActor
@@ -34,7 +35,7 @@ module Level ( Level (..)
              , module Coords
              ) where
 
-import           Control.Lens (ix, lens, Lens', to, view, Fold, lastOf)
+import           Control.Lens (ix, lens, Lens', view, Fold, lastOf)
 import           Control.Lens.At (contains)
 import           Control.Lens.Fold (folded, elemOf, findOf, anyOf)
 import           Control.Lens.Operators
@@ -118,16 +119,16 @@ toString lvl = unlines $ (map . map) (\c -> render . at c $ lvl) coords
 
 -- | returns a list of tiles located at the given coordinate inside the level
 at :: Coord -> Level -> [Tile]
-at coord lvl = map toTile (actorsAt coord lvl) ++ map toTile (staticElementsAt coord lvl)
+at coord lvl = map toTile (actorsAt lvl coord) ++ map toTile (staticElementsAt lvl coord)
 
-actorsAt :: Coord -> Level -> [Actor]
-actorsAt coord lvl = mapMaybe lookupTile ids
+actorsAt :: Level -> Coord -> [Actor]
+actorsAt lvl coord = mapMaybe lookupTile ids
   where
     ids = M.findWithDefault [] coord (lvl ^. coordToId)
     lookupTile ident = M.lookup (asIdentifierOf ident) (lvl ^. actors)
 
-staticElementsAt :: Coord -> Level -> [StaticElement]
-staticElementsAt coord lvl = mapMaybe lookupTile ids
+staticElementsAt :: Level -> Coord -> [StaticElement]
+staticElementsAt lvl coord = mapMaybe lookupTile ids
   where
     ids = M.findWithDefault [] coord (lvl ^. coordToId)
     lookupTile ident = M.lookup (asIdentifierOf ident) (lvl ^. staticElements)
@@ -141,19 +142,23 @@ staticElementsAt coord lvl = mapMaybe lookupTile ids
 -- @
 -- lvl & coordOf dwarf .~ coord
 -- @
-coordOf :: TileRepr t => t -> Lens' Level Coord
-coordOf tile = lens getter setter
+coordOf :: Identifier a -> Lens' Level Coord
+coordOf ident0 = lens getter setter
   where
+    ident = asIdentifierOf ident0
+
     getter lvl =
-      fromMaybe (error $ "the identifer '" ++ show (toTile tile) ++ "' has no assigned coordinate")
-      $ M.lookup (toTile tile ^. Tile.id . to asIdentifierOf) (lvl ^. idToCoord)
+      fromMaybe (error $ "the identifer '" ++ show ident ++ "' has no assigned coordinate")
+      $ M.lookup ident (lvl ^. idToCoord)
+
     setter lvl dst = lvl
-                   & idToCoord . ix tid .~ dst
-                   & coordToId . ix src %~ L.delete tid
-                   & coordToId . ix dst %~ (tid :)
-      where
-        tid = asIdentifierOf $ toTile tile ^. Tile.id
-        src = getter lvl
+                   & idToCoord . ix ident .~ dst
+                   & coordToId . ix src %~ L.delete ident
+                   & coordToId . ix dst %~ (ident :)
+      where src = getter lvl
+
+coordOfTile :: TileRepr t => t -> Lens' Level Coord
+coordOfTile tile = coordOf (toTile tile ^. Tile.id)
 
 isWalkable :: Coord -> Level -> Bool
 isWalkable c lvl = _walkable lvl lvl c
@@ -207,8 +212,8 @@ findTool :: Category -> Coord -> Level -> Maybe StaticElement
 findTool cat coord lvl = do
   p <- P.searchPath (lvl ^-> walkable) (const 1) (const . const 1) coord predicate
   c <- lastOf (P.pathCoords . folded) p
-  findOf folded (^. StaticElement.category . contains cat) $ staticElementsAt c lvl
-  where predicate c = elemOf categories cat $ staticElementsAt c lvl
+  findOf folded (^. StaticElement.category . contains cat) $ staticElementsAt lvl c
+  where predicate = elemOf categories cat . staticElementsAt lvl
 
 categories :: Fold [StaticElement] Category
 categories = folded . StaticElement.category . folded
