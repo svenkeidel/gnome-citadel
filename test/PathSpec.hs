@@ -9,6 +9,7 @@ import qualified Data.PSQueue as PSQ
 import           Path
 import           Path.Internal hiding (floodUntil)
 import           Test.Hspec
+import Debug.Trace (traceShowM)
 
 import           Control.Lens
 
@@ -267,3 +268,10 @@ spec = describe "Path finding functionality" $ do
       let pmap = floodUntil ((> 5) . Map.size) allowed start
       Map.size pmap `shouldSatisfy` (> 5)
       Map.size pmap `shouldBe` 9
+
+    it "should explore disjoint regions respecting blocked coords" $ do
+       let allowed' c@(Coord _ y _) = y /= 3 && allowed c
+           pmap = floodUntil (const False) allowed' start
+       Map.size pmap `shouldBe` 18
+       Map.member (from2d (2,4)) pmap `shouldBe` False
+       Map.member (from2d (2,1)) pmap `shouldBe` True
