@@ -1,15 +1,13 @@
 {-# LANGUAGE FlexibleContexts #-}
 module Level.Command where
 
-import           Control.Lens ((^.),(^?), non)
+import           Control.Coroutine
+import           Control.Coroutine.AwaitYield
+import           Control.Lens ((^.),(^?), non,view)
 import           Control.Lens.At (contains)
 import           Control.Lens.Cons (_tail)
 import           Control.Lens.Fold (folded)
 import           Control.Monad.Error
-
-import           Data.Monoid
-
-import qualified Data.Foldable as DF
 
 import           Actor
 import           Coords
@@ -18,57 +16,58 @@ import qualified Level.Transformation as T
 import Level.Transformation (LevelTrans, LevelError(PathNotFound))
 import           Path (pathCoords)
 import           StaticElement
-import           Unfold
 
-type Command = Unfold LevelTrans
+type Command = Coroutine (AwaitYield Level Level) (Either LevelError) ()
 
-command :: Monad m => LevelTrans -> CommandT m
-command = commandT . return
-
--- | A level transformation that is used by the command scheduler
-type CommandT m = UnfoldT m LevelTrans
-
-commandT :: Monad m => Command -> CommandT m
-commandT = UnfoldT . return
-
-runCommandT :: CommandT m -> m Command
-runCommandT = runUnfoldT
+runTransformation :: LevelTrans -> Command
+runTransformation f = do
+  lvl <- await
+  lvl' <- lift $ f lvl
+  yield lvl'
 
 -- | find a way to the destination and move the actor to it
-approach :: Coord -> Actor -> Level -> Command
-approach dest actor lvl =
+approach :: Coord -> Actor -> Command
+approach dest actor = do
+  lvl <- await
+  let fromCoord  = lvl ^. coordOfTile actor
+      maybePath  = findArea fromCoord destCoords lvl
+      destCoords = if isWalkable dest lvl
+                   then [dest]
+                   else filter (`isWalkable` lvl) (neighbors2d dest)
   case maybePath of
-    Just path -> DF.foldMap (return . T.move actor) (path ^. pathCoords . _tail)
-    Nothing   -> return (const . throwError $ PathNotFound fromCoord dest)
+    Just path -> go (path ^. pathCoords . _tail)
+    Nothing   -> throwError $ PathNotFound fromCoord dest
   where
-    fromCoord  = lvl ^. coordOfTile actor
-    maybePath  = findArea fromCoord destCoords lvl
-    destCoords = if isWalkable dest lvl
-                 then [dest]
-                 else filter (`isWalkable` lvl) (neighbors2d dest)
+    go []       = return ()
+    go (p:path) = do
+      runTransformation $ T.move actor p
+      go path
 
-pickup :: StaticElement -> Actor -> Level -> Command
-pickup item actor lvl =
-  mconcat
-    [ approach itemCoord actor lvl
-    , return $ T.failOnMissingItem actor item itemCoord
-             >> T.pickup actor item
-    ]
-  where itemCoord = lvl ^. coordOfTile item
+pickup :: StaticElement -> Actor -> Command
+pickup item actor = do
+  lvl <- await
+  let itemCoord = lvl ^. coordOfTile item
+  approach itemCoord actor
+  failOnMissingItem actor item itemCoord
+  runTransformation $ T.pickup actor item
 
-mine :: StaticElement -> Actor -> Level -> Command
-mine block actor lvl =
-  mconcat
-    [ if minerHasTool
-        then mempty
-        else
-           case findTool Mining (lvl ^. coordOfTile actor) lvl of
-             Just t  -> pickup t actor lvl
-             Nothing -> return $ const . throwError $ T.ToolMissing Mining
-    , approach blockCoord actor lvl
-    , return $ T.failOnMissingItem actor block blockCoord
-             >> T.mine actor block
-    ]
-  where blockCoord = lvl ^. coordOfTile block
-        minerHasTool :: Bool
-        minerHasTool = actorInventory lvl actor ^? folded . category . contains Mining ^. non False
+failOnMissingItem :: Actor -> StaticElement -> Coord -> Command
+failOnMissingItem actor item oldCoord = do
+  lvl <- await
+  let actualCoord = view (coordOfTile item) lvl
+      itemPresent = oldCoord == actualCoord
+  unless itemPresent $ throwError $ T.ItemMissing actor item oldCoord
+
+mine :: StaticElement -> Actor -> Command
+mine block actor = do
+  lvl <- await
+  let minerHasTool = actorInventory lvl actor ^? folded . category . contains Mining ^. non False
+  unless minerHasTool $
+    case findTool Mining (lvl ^. coordOfTile actor) lvl of
+      Just t  -> pickup t actor
+      Nothing -> throwError $ T.ToolMissing Mining
+
+  let blockCoord = lvl ^. coordOfTile block
+  approach blockCoord actor
+  failOnMissingItem actor block blockCoord
+  runTransformation $ T.mine actor block

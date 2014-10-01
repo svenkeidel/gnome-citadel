@@ -16,7 +16,7 @@ library
   ghc-options:         -Wall -Werror
   exposed-modules:     Actor
                      , Coords
-                     , Coroutine
+                     , Control.Coroutine
                      , Counter
                      , Level
                      , Level.Command

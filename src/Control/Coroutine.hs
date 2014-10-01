@@ -37,5 +37,8 @@ instance (Functor s, MonadError e m) => MonadError e (Coroutine s m) where
   throwError e = Coroutine (throwError e)
   catchError (Coroutine c) k = Coroutine (catchError c (resume . k))
 
+instance Functor s => MonadTrans (Coroutine s) where
+  lift = Coroutine . liftM Right
+
 suspend :: (Applicative m, Functor s) => s (Coroutine s m x) -> Coroutine s m x
 suspend s = Coroutine (pure (Left s))
