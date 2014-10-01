@@ -17,6 +17,7 @@ library
   exposed-modules:     Actor
                      , Coords
                      , Control.Coroutine
+                     , Control.Coroutine.AwaitYield
                      , Counter
                      , Level
                      , Level.Command
@@ -26,14 +27,12 @@ library
                      , Path.Internal
                      , Queue
                      , Renderable
-                     , Scheduler
                      , StaticElement
                      , Task
                      , TaskManagement
                      , TestHelper
                      , TestTiles
                      , Tile
-                     , Unfold
                      , Utils
   Build-depends:       PSQueue >= 1.1 && < 1.2
                      , base == 4.*

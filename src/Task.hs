@@ -8,23 +8,29 @@ module Task ( Task (..)
             , command
             , precondition
             , unless
+            , catch
             ) where
 
 import Prelude hiding (id)
+
+import Control.Coroutine
+import Control.Coroutine.AwaitYield
+
 import Control.Lens((^.))
 import Control.Lens.TH
+import Control.DeepSeq (NFData)
+import Control.DeepSeq (rnf)
 
 import Data.Ord(comparing)
 import Data.Monoid
+import Data.Functor.Identity
 
 import Counter
 import Coords
 import Actor(Actor, TaskType)
-import Unfold
 
 import Level
-import Control.DeepSeq (NFData)
-import Control.DeepSeq (rnf)
+import Level.Transformation
 
 data TaskStatus
   = CannotBeCompleted String
@@ -46,10 +52,25 @@ unless b s | b         = Satisfied
 data Task = Task { _id :: Identifier Task
                  , _target :: Coord
                  , _taskType :: TaskType
-                 , _command :: Actor -> Level -> Unfold (Level -> TaskStatus)
+                 , _command :: Actor -> Coroutine (AwaitYield Level TaskStatus) Identity ()
                  , _precondition :: Level -> Actor -> Condition String
                  }
 makeLenses ''Task
+
+catch :: Coroutine (AwaitYield Level Level) (Either LevelError) ()
+      -> (LevelError -> TaskStatus)
+      -> Coroutine (AwaitYield Level TaskStatus) Identity ()
+catch (Coroutine c) f = 
+  case c of
+    Left l  -> do
+      yield (f l)
+    Right (Right ()) -> return ()
+    Right (Left (Await g)) -> do
+      lvl <- await
+      g lvl `catch` f
+    Right (Left (Yield lvl c')) -> do
+      yield (InProgress lvl)
+      c' `catch` f
 
 instance NFData Task where
   rnf (Task (Identifier tid) tgt typ _ _) = rnf (tid,tgt,typ)
@@ -75,7 +96,7 @@ instance Show ActiveTask where
    ++ ")"
 
 -- Stores the original task and the current state of the execution of the task.
-data ActiveTask = ActiveTask Task (Unfold (Level -> TaskStatus))
+data ActiveTask = ActiveTask Task (Coroutine (AwaitYield Level TaskStatus) Identity ())
 
 instance NFData ActiveTask where
   rnf (ActiveTask x1 _) = rnf x1

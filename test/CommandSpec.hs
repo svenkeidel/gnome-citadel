@@ -1,6 +1,8 @@
 {-# LANGUAGE ScopedTypeVariables #-}
 module CommandSpec(main, spec) where
 
+import Control.Coroutine 
+import Control.Coroutine.AwaitYield
 import Control.Lens (_1)
 import Control.Monad.State
 import Control.Monad.Error
@@ -13,7 +15,6 @@ import Level
 import Level.Transformation
 import Level.Command
 import qualified Level.Command as LC
-import Unfold
 
 type SchedulerState = (Level,Command)
 type SchedulerStateE = ErrorT LevelError IO SchedulerState
@@ -31,12 +32,12 @@ spec = describe "An Execution" $ do
       dwarf' = findDwarf level 'm'
 
       executeGameStep' :: SchedulerState -> SchedulerStateE
-      executeGameStep' (lvl,com) =
-        case next com of
-          Done             -> return (lvl,com)
-          Yield trans com' -> ErrorT $ return $ do
-            lvl' <- trans lvl
-            return (lvl',com')
+      executeGameStep' (lvl,c) =
+        case resume c of
+          Left e                       -> throwError e
+          Right (Right ())             -> return (lvl,c)
+          Right (Left (Await f))       -> return (lvl,f lvl)
+          Right (Left (Yield lvl' c')) -> return (lvl',c')
 
       gameStepShouldChangeLevelTo :: [String] -> SchedulerState -> SchedulerStateE
       gameStepShouldChangeLevelTo expected =
@@ -72,7 +73,7 @@ spec = describe "An Execution" $ do
                                     , " # "
                                     , "   "
                                     ]
-         $ (level, approach (from2d (2,0)) dwarf' level)
+         $ (level, approach (from2d (2,0)) dwarf')
 
       noError e
 
@@ -87,7 +88,7 @@ spec = describe "An Execution" $ do
                                     , "m# "
                                     , "   "
                                     ]
-         $ (level, approach (from2d (1,0)) dwarf' level)
+         $ (level, approach (from2d (1,0)) dwarf')
 
       noError e
 
@@ -109,6 +110,6 @@ spec = describe "An Execution" $ do
                                     , " # "
                                     , "   "
                                     ]
-         $ (level, LC.mine wall dwarf' level)
+         $ (level, LC.mine wall dwarf')
 
       noError e

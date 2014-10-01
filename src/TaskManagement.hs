@@ -19,15 +19,18 @@ module TaskManagement ( TaskManager
                       , executeGameStep
                       ) where
 
+import           Control.Coroutine
+import           Control.Coroutine.AwaitYield
 import           Control.Lens (contains,set)
 import           Control.Lens.Getter (view)
 import           Control.Lens.Operators
 import           Control.Lens.TH
 import           Control.Monad (guard)
-import           Data.Function (on)
-import           Data.List (sortBy,(\\))
 
 import           Data.Default
+import           Data.Function (on)
+import           Data.Functor.Identity
+import           Data.List (sortBy,(\\))
 import qualified Data.Map as M
 import           Data.Ord (comparing)
 import           Data.Set (Set)
@@ -42,7 +45,6 @@ import           Level hiding (isReachable, actors)
 import           Path (floodUntil,ContinueFlooding(..))
 import           Task (Task,ActiveTask(..),TaskStatus(..))
 import qualified Task
-import           Unfold
 import           Utils ((^->))
 
 data Reachable = Reachable | Unreachable deriving (Eq,Show)
@@ -153,7 +155,7 @@ assignTasks lvl tm00 = chooseAssignments tm0 possibleAssignments
         reachableRel = calculateReachable tm00 lvl
         chooseAssignments tm []             = tm
         chooseAssignments tm ((a,t):tuples) =
-          let tm' = assignTo t a lvl tm
+          let tm' = assignTo t a tm
           in chooseAssignments tm' $ filter (\(a',t') -> not (a == a' || t == t')) tuples
         possibleAssignments = sortBy (comparing $ uncurry distanceToTask) $ do
           idleActor <- idleActors lvl tm0
@@ -172,10 +174,10 @@ idleActors lvl tm = actors
 
 -- | Assign the given task to the given actor and add the appropriate
 -- command to the command scheduler.
-assignTo :: Task -> Actor -> Level -> TaskManager -> TaskManager
-assignTo task actor lvl
+assignTo :: Task -> Actor -> TaskManager -> TaskManager
+assignTo task actor
   = (inactive       %~ Set.delete task)
-  . (active         %~ insert (ActiveTask task $ Task._command task actor lvl))
+  . (active         %~ insert (ActiveTask task $ Task._command task actor))
   . (taskAssignment %~ M.insert (actor ^. Actor.id) (task ^. Task.id))
   where
     insert = (:)
@@ -196,11 +198,12 @@ executeGameStep :: Level -> TaskManager -> ([AbortedTask], Level, TaskManager)
 executeGameStep lvl0 tm0 = let (aborted,lvl',tm') = foldr go ([],lvl0,tm0 & active .~ []) (tm0 ^. active)
                            in (aborted, lvl', assignTasks lvl' tm')
   where
-    go (ActiveTask task state) (err,lvl,tm) =
-      case next state of
-        Done               -> (err,lvl, unassignTask task tm)
-        Yield trans state' ->
-          case trans lvl of
+    go (ActiveTask task c) (err,lvl,tm) =
+      case runIdentity (resume c) of
+        Right () -> (err,lvl,unassignTask task tm)
+        Left (Await f) -> go (ActiveTask task (f lvl)) (err,lvl,tm)
+        Left (Yield status c') ->
+          case status of
             -- simply drop the task.
             CannotBeCompleted s -> (AbortedTask task s : err,lvl, tm)
 
@@ -208,6 +211,19 @@ executeGameStep lvl0 tm0 = let (aborted,lvl',tm') = foldr go ([],lvl0,tm0 & acti
             Reschedule          -> (err,lvl, addTask task tm)
 
             -- update the task state in the manager and the modified level.
-            InProgress lvl'     -> (err,lvl', tm & active %~ insert (ActiveTask task state'))
+            InProgress lvl'     -> (err,lvl', tm & active %~ insert (ActiveTask task c'))
+          
+
+        {-Done               -> (err,lvl, unassignTask task tm)-}
+        {-Yield trans state' ->-}
+          {-case trans lvl of-}
+            {--- simply drop the task.-}
+            {-CannotBeCompleted s -> (AbortedTask task s : err,lvl, tm)-}
+
+            {--- drop the current state and readd the task as inactive.-}
+            {-Reschedule          -> (err,lvl, addTask task tm)-}
+
+            {--- update the task state in the manager and the modified level.-}
+            {-InProgress lvl'     -> (err,lvl', tm & active %~ insert (ActiveTask task state'))-}
 
     insert = (:)
