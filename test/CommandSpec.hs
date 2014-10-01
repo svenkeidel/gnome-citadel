@@ -14,6 +14,7 @@ import HspecHelper
 import Level
 import Level.Transformation
 import Level.Command
+import qualified Level.Transformation as T
 import qualified Level.Command as LC
 
 type SchedulerState = (Level,Command)
@@ -36,7 +37,7 @@ spec = describe "An Execution" $ do
         case resume c of
           Left e                       -> throwError e
           Right (Right ())             -> return (lvl,c)
-          Right (Left (Await f))       -> return (lvl,f lvl)
+          Right (Left (Await f))       -> executeGameStep' (lvl,f lvl)
           Right (Left (Yield lvl' c')) -> return (lvl',c')
 
       gameStepShouldChangeLevelTo :: [String] -> SchedulerState -> SchedulerStateE
@@ -49,6 +50,17 @@ spec = describe "An Execution" $ do
       noError :: Either LevelError SchedulerState -> Expectation
       noError (Left l) = expectationFailure (show l)
       noError (Right _) = return ()
+
+  describe "A Level Transition" $ do
+    it "can be run inside a command" $ do
+      e <- runErrorT $
+        gameStepShouldChangeLevelTo [ "## "
+                                    , " # "
+                                    , " m "
+                                    ]
+         $ (level, runTransformation (T.move dwarf' (from2d (1,2))))
+
+      noError e
 
   describe "An Approach" $ do
     it "moves an actor in multiple game steps to a destination coordinate" $ do
