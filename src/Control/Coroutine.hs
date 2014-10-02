@@ -4,6 +4,12 @@
            , UndecidableInstances
            , MultiParamTypeClasses
            #-}
+{-
+ - The code of this module is taken straight from Mario Blazevic's
+ - monad-coroutine library, so all credits go to him. We added an applicative
+ - instance for `Coroutine` and lowered the constraints on functions like yield
+ - and await to applicative.
+ -}
 module Control.Coroutine where
 
 import Control.Applicative
