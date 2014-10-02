@@ -104,7 +104,7 @@ spec = describe "An Execution" $ do
 
       noError e
 
-  describe "A Mining Command" $
+  describe "A Mining Command" $ do
     it "should approach the mining location, to remove the field and place the actor on top" $ do
       let wall = findWall level (1,0)
       e <- runErrorT $
@@ -125,3 +125,57 @@ spec = describe "An Execution" $ do
          $ (level, LC.mine wall dwarf')
 
       noError e
+
+    it "needs the appropriate tool before the dwarf can begin to mine" $ do
+
+      let levelWithPickAxe = createLevel $ unlines [ "##x"
+                                                   , " # "
+                                                   , "m  "
+                                                   ]
+          wall = findWall levelWithPickAxe (0,0)
+          miningDwarf = findDwarf level 'm'
+
+      e <- runErrorT $
+        gameStepShouldChangeLevelTo [ "##x"
+                                    , " # "
+                                    , "m  "
+                                    ]
+        >=>
+        gameStepShouldChangeLevelTo [ "##x"
+                                    , " # "
+                                    , " m "
+                                    ]
+        >=>
+        gameStepShouldChangeLevelTo [ "##x"
+                                    , " #m"
+                                    , "   "
+                                    ]
+        >=>
+        gameStepShouldChangeLevelTo [ "##m"
+                                    , " # "
+                                    , "   "
+                                    ]
+        >=>
+        gameStepShouldChangeLevelTo [ "## "
+                                    , " #m"
+                                    , "   "
+                                    ]
+        >=>
+        gameStepShouldChangeLevelTo [ "## "
+                                    , " # "
+                                    , " m "
+                                    ]
+        >=>
+        gameStepShouldChangeLevelTo [ "## "
+                                    , "m# "
+                                    , "   "
+                                    ]
+        >=>
+        gameStepShouldChangeLevelTo [ "m# "
+                                    , " # "
+                                    , "   "
+                                    ]
+         $ (levelWithPickAxe, LC.mine wall miningDwarf)
+
+      noError e
+
