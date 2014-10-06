@@ -1,4 +1,7 @@
-{-# LANGUAGE DeriveFunctor #-}
+{-# LANGUAGE DeriveFunctor
+           , MultiParamTypeClasses
+           , FlexibleInstances
+           #-}
 module Control.Coroutine.AwaitYield where
 
 import Control.Applicative
@@ -9,8 +12,8 @@ data AwaitYield x y c
   | Yield y c
   deriving Functor
 
-await :: Applicative m => Coroutine (AwaitYield x y) m x
-await = suspend (Await pure)
+instance Awaiting x (AwaitYield x y) where
+  await = suspend (Await pure)
 
-yield :: Applicative m => y -> Coroutine (AwaitYield x y) m ()
-yield y = suspend (Yield y (pure ()))
+instance Yielding y (AwaitYield x y) where
+  yield y = suspend (Yield y (pure ()))

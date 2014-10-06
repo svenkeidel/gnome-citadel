@@ -3,6 +3,7 @@
            , FlexibleInstances
            , UndecidableInstances
            , MultiParamTypeClasses
+           , FunctionalDependencies
            #-}
 {-
  - The code of this module is taken straight from Mario Blazevic's
@@ -45,6 +46,12 @@ instance (Functor s, MonadError e m) => MonadError e (Coroutine s m) where
 
 instance Functor s => MonadTrans (Coroutine s) where
   lift = Coroutine . liftM Right
+
+class Yielding x f | f -> x where
+  yield :: Applicative g => x -> Coroutine f g ()
+
+class Awaiting x f | f -> x where
+  await :: Applicative g => Coroutine f g x
 
 suspend :: (Applicative m, Functor s) => s (Coroutine s m x) -> Coroutine s m x
 suspend s = Coroutine (pure (Left s))
