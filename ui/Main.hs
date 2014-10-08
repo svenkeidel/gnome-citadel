@@ -2,6 +2,7 @@
 module Main (main) where
 
 import           Control.Applicative ((<$>),(<*>))
+import           Control.Exception (finally)
 import           Control.Lens (_1, _2, preview, _head, folded, to, view)
 import           Control.Lens.Operators
 import           Control.Lens.TH
@@ -38,7 +39,7 @@ main :: IO ()
 main = do
   vty <- mkVty def
   eventLoop vty (def & level .~ lvlInit)
-  shutdown vty
+    `finally` shutdown vty
 
 lvlInit :: Level
 lvlInit = createLevel $ unlines startLevel
