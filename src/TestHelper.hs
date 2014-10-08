@@ -60,7 +60,7 @@ findDwarfByCoord lvl c = head $ actorsAt lvl c
 
 findWall :: Level -> (Int, Int) -> StaticElement
 findWall lvl c = head $ findStaticElement (\t -> render (toTile t) == '#'
-                                              && lvl ^. coordOfTile t  == from2d c) lvl
+                                              && lvl ^?! coordOfTile t  == from2d c) lvl
 
 isRight :: Either a b -> Bool
 isRight (Right _) = True

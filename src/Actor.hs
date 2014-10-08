@@ -1,4 +1,4 @@
-{-# LANGUAGE TemplateHaskell, FlexibleContexts #-}
+{-# LANGUAGE TemplateHaskell, FlexibleContexts, TypeFamilies #-}
 module Actor ( Actor (..)
              , TaskType(..)
              , id
@@ -41,6 +41,10 @@ instance NFData Actor where
 
 instance Eq Actor where
   (==) = (==) `on` _id
+
+instance HasIdentifier Actor where
+  type Identifiable Actor = Actor
+  getIdentifier = _id
 
 pickItem :: S.StaticElement -> Actor -> Actor
 pickItem item actor = actor & inventory %~ (item ^. S.id :)

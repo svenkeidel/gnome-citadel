@@ -1,4 +1,4 @@
-{-# LANGUAGE TemplateHaskell #-}
+{-# LANGUAGE TemplateHaskell, TypeFamilies #-}
 module StaticElement ( StaticElement (..)
                      , id
                      , charRepr
@@ -43,5 +43,9 @@ data StaticElement = StaticElement { _id :: Identifier StaticElement
 
 instance NFData StaticElement where
   rnf (StaticElement i c w cat) = rnf (i,c,w,cat)
+
+instance HasIdentifier StaticElement where
+  type Identifiable StaticElement = StaticElement
+  getIdentifier = _id
 
 makeLenses ''StaticElement

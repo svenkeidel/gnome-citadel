@@ -49,7 +49,9 @@ onKeyPressed _ c state = case c of
   '.' -> return $ executeGameStep state
   ':' -> return $ nTimes 50 executeGameStep state
   'm' -> return $ case findWall csr lvl of
-    Just w  -> addTask' (LevelTask.mine w lvl) state
+    Just w  -> case LevelTask.mine w lvl of
+                 Just t -> addTask' t state
+                 Nothing -> errorMessage "Mining task could not be created"
     Nothing -> errorMessage "Mining target not mineable" state
   'M' -> do
     let ws = findAllWalls lvl

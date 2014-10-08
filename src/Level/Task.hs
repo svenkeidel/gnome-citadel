@@ -11,18 +11,19 @@ import           StaticElement (StaticElement, Category(..))
 import           Task
 import           Counter
 
-mine :: StaticElement -> Level -> Identifier Task -> Task
-mine s lvl i = Task
-             { _id = i
-             , _target = lvl ^. coordOfTile s
-             , _taskType = Mine
-             , _command = \dwarf -> Command.mine s dwarf `catch` handler
-             , _precondition = \lvl' actor ->
-                 unless (isReachable (lvl' ^. coordOfTile s) lvl')
-                   "Mining target is unreachable"
-                 <>
-                 unless (holdsSuitableTool lvl' actor Mining)
-                   "Actor holds no suitable tool for Mining"
-             }
+mine :: StaticElement -> Level -> Identifier Task -> Maybe Task
+mine s lvl i = do
+  t <- lvl ^? coordOfTile s
+  return Task { _id = i
+              , _target = t
+              , _taskType = Mine
+              , _command = \dwarf -> Command.mine s dwarf `catch` handler
+              , _precondition = \lvl' actor ->
+                  unless (maybe False (`isReachable` lvl') (lvl' ^? coordOfTile s))
+                    "Mining target is unreachable"
+                  <>
+                  unless (holdsSuitableTool lvl' actor Mining)
+                    "Actor holds no suitable tool for Mining"
+              }
   where
     handler _ = Reschedule

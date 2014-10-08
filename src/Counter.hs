@@ -1,12 +1,21 @@
-{-# LANGUAGE GeneralizedNewtypeDeriving #-}
+{-# LANGUAGE GeneralizedNewtypeDeriving, TypeFamilies #-}
 module Counter ( Counter
                , Identifier(..)
+               , HasIdentifier(..)
                , freshId
                , asIdentifierOf
                ) where
 
 import Data.Default
 import Control.DeepSeq (NFData,rnf)
+
+class HasIdentifier a where
+  type Identifiable a
+  getIdentifier :: a -> Identifier (Identifiable a)
+
+instance HasIdentifier (Identifier a) where
+  type Identifiable (Identifier a) = a
+  getIdentifier (Identifier i) = (Identifier i)
 
 newtype Identifier a = Identifier Int
   deriving (Eq, Ord, Show, Enum)

@@ -1,4 +1,4 @@
-{-# LANGUAGE TemplateHaskell, FlexibleContexts, RankNTypes #-}
+{-# LANGUAGE TemplateHaskell, FlexibleContexts, RankNTypes, ViewPatterns #-}
 module TaskManagement ( TaskManager
                       , AbortedTask (AbortedTask)
                       , Reachable(..)
@@ -21,7 +21,7 @@ module TaskManagement ( TaskManager
 
 import           Control.Coroutine
 import           Control.Coroutine.AwaitYield
-import           Control.Lens (contains,set)
+import           Control.Lens (contains,set,preview)
 import           Control.Lens.Getter (view)
 import           Control.Lens.Operators
 import           Control.Lens.TH
@@ -32,7 +32,6 @@ import           Data.Function (on)
 import           Data.Functor.Identity
 import           Data.List (sortBy,(\\))
 import qualified Data.Map as M
-import           Data.Ord (comparing)
 import           Data.Set (Set)
 import qualified Data.Set as Set
 
@@ -141,7 +140,7 @@ calculateReachable tm lvl = go Set.empty idle
 floodFill :: Level -> Set Task -> Identifier Actor -> ([Identifier Actor],[Identifier Task])
 floodFill lvl ts actorId = (Set.toList actors,Set.toList tasks)
   where coords :: Set Coord
-        coords = M.keysSet $ floodUntil (const Continue) (lvl ^-> walkable) (lvl ^. coordOf actorId)
+        coords = M.keysSet $ maybe M.empty (floodUntil (const Continue) (lvl ^-> walkable)) (preview (coordOf actorId) lvl)
 
         actors :: Set (Identifier Actor)
         actors = Set.foldl' (\acc coord -> Set.fromList (map (view Actor.id) (actorsAt lvl coord)) `Set.union` acc) Set.empty coords
@@ -157,13 +156,18 @@ assignTasks lvl tm00 = chooseAssignments tm0 possibleAssignments
         chooseAssignments tm ((a,t):tuples) =
           let tm' = assignTo t a tm
           in chooseAssignments tm' $ filter (\(a',t') -> not (a == a' || t == t')) tuples
-        possibleAssignments = sortBy (comparing $ uncurry distanceToTask) $ do
+        possibleAssignments = sortBy (compareDistanceToTask) $ do
           idleActor <- idleActors lvl tm0
           task <- Set.toList . view inactive $ tm0
           guard $ canBeDoneBy tm0 idleActor task
           return (idleActor, task)
-        distanceToTask :: Actor -> Task -> Double
-        distanceToTask a task = distance (lvl ^. coordOfTile a) (task ^. Task.target)
+        helper i = preview (coordOf i) lvl
+        compareDistanceToTask :: (Actor, Task) -> (Actor, Task) -> Ordering
+        compareDistanceToTask (helper -> Just a1,view Task.target -> t1) (helper -> Just a2,view Task.target -> t2) =
+          distance a1 t1 `compare` distance a2 t2
+        compareDistanceToTask (helper -> Nothing,_) (helper -> Just _,_) = LT
+        compareDistanceToTask (helper -> Just _,_)  (helper -> Nothing,_) = GT
+        compareDistanceToTask (_,_) (_,_) = EQ
 
 idleActors :: Level -> TaskManager -> [Actor]
 idleActors lvl tm = actors
@@ -212,7 +216,7 @@ executeGameStep lvl0 tm0 = let (aborted,lvl',tm') = foldr go ([],lvl0,tm0 & acti
 
             -- update the task state in the manager and the modified level.
             InProgress lvl'     -> (err,lvl', tm & active %~ insert (ActiveTask task c'))
-          
+
 
         {-Done               -> (err,lvl, unassignTask task tm)-}
         {-Yield trans state' ->-}
