@@ -219,8 +219,31 @@ spec = describe "The TaskManager" $ do
                                                      ,"    m   "
                                                      ]
                        $ (lvl, taskManagerAssigned)
-        
+
       return ()
+
+    it "two dwarf race for the same pickaxe" $ do
+      let levelWithPickAxe = createLevel $ unlines [ "# m"
+                                                   , " x "
+                                                   , "m #"
+                                                   ]
+          wall1 = findWall levelWithPickAxe (0,0)
+          wall2 = findWall levelWithPickAxe (2,2)
+          task1 = LevelTask.mine wall1 levelWithPickAxe (Identifier 1)
+          task2 = LevelTask.mine wall2 levelWithPickAxe (Identifier 2)
+          taskManagerAssigned = assignTasks levelWithPickAxe $ addTask task2 $ addTask task1 empty
+      (_,es) <- runWriterT $
+        gameStepShouldChangeLevelTo [ "#  "
+                                    , " m "
+                                    , "  #"
+                                    ]
+        >=>
+        gameStepShouldChangeLevelTo [ "m  "
+                                    , "   "
+                                    , "  m"
+                                    ]
+         $ (levelWithPickAxe, taskManagerAssigned)
+      es `shouldSatisfy` null -- no errors should have occured
 
     where
       getTask = map (\(ActiveTask t _) -> t)
