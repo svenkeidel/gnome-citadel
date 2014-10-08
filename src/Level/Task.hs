@@ -2,7 +2,7 @@ module Level.Task where
 
 import           Control.Lens.Operators
 
-import           Data.Monoid (mconcat)
+import           Data.Monoid ((<>))
 
 import           Actor (TaskType(Mine))
 import           Level
@@ -18,11 +18,11 @@ mine s lvl i = Task
              , _taskType = Mine
              , _command = \dwarf -> Command.mine s dwarf `catch` handler
              , _precondition = \lvl' actor ->
-                 mconcat [ unless (isReachable (lvl' ^. coordOfTile s) lvl')
-                            "Mining target is unreachable"
-                         , unless (holdsSuitableTool lvl' actor Mining)
-                           "Actor holds no suitable tool for Mining"
-                         ]
+                 unless (isReachable (lvl' ^. coordOfTile s) lvl')
+                   "Mining target is unreachable"
+                 <>
+                 unless (holdsSuitableTool lvl' actor Mining)
+                   "Actor holds no suitable tool for Mining"
              }
   where
     handler _ = Reschedule
