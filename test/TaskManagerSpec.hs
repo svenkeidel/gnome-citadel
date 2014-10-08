@@ -40,7 +40,6 @@ spec = describe "The TaskManager" $ do
       assignTask' lvl' task' = let taskManagerWithTask = addTask task' empty
                                in assignTasks lvl' taskManagerWithTask
 
-
   it "can deduce if the given task is reachable by a dwarf" $ do
     let lvl = createLevel $ unlines [ "  #  "
                                     , " ##  "
@@ -179,6 +178,49 @@ spec = describe "The TaskManager" $ do
       unless (null e) $ expectationFailure $ show e
 
       tm' `shouldBe` empty
+
+    it "doesn't conflict if two dwarfs race for the pickaxe" $ do
+      let lvl = createLevel $ unlines ["  ####  "
+                                      ,"  ##### "
+                                      ,"        "
+                                      ,"m   x  m"
+                                      ]
+          task1 = LevelTask.mine (findWall lvl (2,0)) lvl (Identifier 1)
+          task2 = LevelTask.mine (findWall lvl (5,0)) lvl (Identifier 2)
+          taskManagerAssigned = assignTasks lvl $ addTask task2 $ addTask task1 empty
+
+      _ <- execWriterT $ gameStepShouldChangeLevelTo ["  ####  "
+                                                     ,"  ##### "
+                                                     ,"        "
+                                                     ," m  x m "
+                                                     ]
+                         >=>
+                         gameStepShouldChangeLevelTo ["  ####  "
+                                                     ,"  ##### "
+                                                     ,"        "
+                                                     ,"  m xm  "
+                                                     ]
+                         >=>
+                         gameStepShouldChangeLevelTo ["  ####  "
+                                                     ,"  ##### "
+                                                     ,"        "
+                                                     ,"   mm   "
+                                                     ]
+                         >=>
+                         gameStepShouldChangeLevelTo ["  ####  "
+                                                     ,"  ##### "
+                                                     ,"        "
+                                                     ,"    m   "
+                                                     ]
+                         >=>
+                         gameStepShouldChangeLevelTo ["  ####  "
+                                                     ,"  ##### "
+                                                     ,"    m   "
+                                                     ,"    m   "
+                                                     ]
+                       $ (lvl, taskManagerAssigned)
+        
+      return ()
 
     where
       getTask = map (\(ActiveTask t _) -> t)
