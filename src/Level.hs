@@ -148,7 +148,7 @@ coordOf ident0 = lens getter setter
     ident = asIdentifierOf ident0
 
     getter lvl =
-      fromMaybe (error $ "the identifer '" ++ show ident ++ "' has no assigned coordinate")
+      fromMaybe (error $ "the identifer '" ++ show ident ++ "' has no assigned coordinate in idToCoord:\n\n" ++ show (lvl ^. idToCoord))
       $ M.lookup ident (lvl ^. idToCoord)
 
     setter lvl dst = lvl
