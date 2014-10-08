@@ -202,8 +202,14 @@ isReachable target lvl =
           P.defaultPath (lvl ^-> walkable) actorCoord target
 
 actorInventory :: Level -> Actor -> [StaticElement]
-actorInventory lvl actor = map ((lvl ^. staticElements) M.!) invIds
-  where invIds = actor ^. Actor.inventory
+actorInventory lvl actor = map lookupId invIds
+  where invIds :: [Identifier StaticElement]
+        invIds = actor ^. Actor.inventory
+
+        lookupId :: Identifier StaticElement -> StaticElement
+        lookupId identifier = case M.lookup identifier (lvl ^. staticElements) of
+                                Just e -> e
+                                Nothing -> error $ "Could not find the identifier: " ++ show identifier ++ " which is in the inventory of actor: " ++ show actor ++ "\n Static elements in the level:\n\n" ++ show (lvl ^. staticElements)
 
 holdsSuitableTool :: Level -> Actor -> Category -> Bool
 holdsSuitableTool lvl actor cat = anyOf categories (== cat) (actorInventory lvl actor)

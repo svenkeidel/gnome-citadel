@@ -1,7 +1,7 @@
 {-# LANGUAGE ScopedTypeVariables #-}
 module CommandSpec(main, spec) where
 
-import Control.Coroutine 
+import Control.Coroutine
 import Control.Coroutine.AwaitYield
 import Control.Lens (_1)
 import Control.Monad.State
@@ -133,14 +133,14 @@ spec = describe "An Execution" $ do
                                                    , "m  "
                                                    ]
           wall = findWall levelWithPickAxe (0,0)
-          miningDwarf = findDwarf level 'm'
+          miningDwarf = findDwarf levelWithPickAxe 'm'
 
       e <- runErrorT $
-        gameStepShouldChangeLevelTo [ "##x"
-                                    , " # "
-                                    , "m  "
-                                    ]
-        >=>
+        -- gameStepShouldChangeLevelTo [ "##x"
+        --                             , " # "
+        --                             , "m  "
+        --                             ]
+        -- >=>
         gameStepShouldChangeLevelTo [ "##x"
                                     , " # "
                                     , " m "
@@ -178,4 +178,3 @@ spec = describe "An Execution" $ do
          $ (levelWithPickAxe, LC.mine wall miningDwarf)
 
       noError e
-
