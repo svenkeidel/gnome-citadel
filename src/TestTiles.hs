@@ -19,4 +19,4 @@ chopper :: Identifier Actor -> Actor
 chopper i = Actor i 'c' [] (Set.fromList [Lumber])
 
 pickaxe :: Identifier StaticElement -> StaticElement
-pickaxe i = StaticElement i '⚒' Walkable (Set.fromList [Mining])
+pickaxe i = StaticElement i 'x' Walkable (Set.fromList [Mining])
