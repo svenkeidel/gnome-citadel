@@ -136,11 +136,6 @@ spec = describe "An Execution" $ do
           miningDwarf = findDwarf levelWithPickAxe 'm'
 
       e <- runErrorT $
-        -- gameStepShouldChangeLevelTo [ "##x"
-        --                             , " # "
-        --                             , "m  "
-        --                             ]
-        -- >=>
         gameStepShouldChangeLevelTo [ "##x"
                                     , " # "
                                     , " m "
@@ -148,6 +143,11 @@ spec = describe "An Execution" $ do
         >=>
         gameStepShouldChangeLevelTo [ "##x"
                                     , " #m"
+                                    , "   "
+                                    ]
+        >=>
+        gameStepShouldChangeLevelTo [ "##m"
+                                    , " # "
                                     , "   "
                                     ]
         >=>
