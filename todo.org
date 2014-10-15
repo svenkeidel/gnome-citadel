@@ -8,7 +8,8 @@
     CLOSED: [2014-08-13 Wed 12:42]
 *** DONE findWall partial / write safe version
     CLOSED: [2014-08-13 Wed 15:07]
-**** BUG marking empty field for mining -> empty list
+**** DONE marking empty field for mining -> empty list
+     CLOSED: [2014-10-15 Wed 13:49]
 ** TODO GUI
 *** DONE message/logging area
     CLOSED: [2014-08-13 Wed 14:10]
@@ -19,8 +20,15 @@
 gnome-citadel: the identifer 'Tile {_id = Identifier 22, _charRepr =
 '#'}' has no assigned coordinate
 - don't do it twice if same task present (different equality check)
-*** BUG Mining task is assigned although tool not available
+=> new equality check, BUT erases previous task
+*** DONE Mining task is assigned although tool not available
+    CLOSED: [2014-10-15 Wed 13:33]
 - check if actor satisfies required task prerequisites
-*** BUG After picking up tool, actor 'resets' to start point
+=> does no longer occur
+*** DONE After picking up tool, actor 'resets' to start point
+    CLOSED: [2014-10-15 Wed 12:59]
 ...and continues from there
-*** BUG Chosen task is not the one nearest to actor
+=> coroutines
+*** DONE Chosen task is not the one nearest to actor
+    CLOSED: [2014-10-15 Wed 13:00]
+=> new heuristic for scheduling
