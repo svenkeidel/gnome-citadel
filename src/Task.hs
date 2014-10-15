@@ -21,7 +21,6 @@ import Control.Lens.TH
 import Control.DeepSeq (NFData)
 import Control.DeepSeq (rnf)
 
-import Data.Ord(comparing)
 import Data.Monoid
 import Data.Functor.Identity
 
@@ -87,10 +86,10 @@ instance Symbol Task where
   sym _ = "Task"
 
 instance Eq Task where
-  t1 == t2 = t1 ^. id == t2 ^. id
+  t1 == t2 = t1 ^. target == t2 ^. target && t1 ^. taskType == t2 ^. taskType
 
 instance Ord Task where
-  compare = comparing (^. id)
+  compare t1 t2 = compare (t2 ^. target,t2 ^. taskType) (t1 ^. target, t1 ^. taskType)
 
 instance Show ActiveTask where
   show (ActiveTask task _)
