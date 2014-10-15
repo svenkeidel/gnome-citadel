@@ -48,4 +48,7 @@ instance HasIdentifier StaticElement where
   type Identifiable StaticElement = StaticElement
   getIdentifier = _id
 
+instance Symbol StaticElement where
+  sym _ = "StaticElement"
+
 makeLenses ''StaticElement

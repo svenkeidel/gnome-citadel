@@ -17,8 +17,18 @@ import qualified StaticElement
 data Tile = Tile
           { _id :: Identifier Tile
           , _charRepr :: Char
-          } deriving Show
+          }
 makeLenses ''Tile
+
+instance Show Tile where
+  show (Tile i cr) = unwords [ "Tile {"
+                             , "id = ", show i
+                             , ", char= ", show cr
+                             , "}"
+                             ]
+
+instance Symbol Tile where
+  sym _ = "Tile"
 
 class TileRepr t where
   toTile :: t -> Tile

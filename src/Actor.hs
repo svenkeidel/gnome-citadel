@@ -33,8 +33,21 @@ data Actor = Actor { _id :: Identifier Actor
                    , _charRepr :: Char
                    , _inventory :: [Identifier S.StaticElement]
                    , _abilities :: Set.Set TaskType
-                   } deriving Show
+                   }
 makeLenses ''Actor
+
+instance Symbol Actor where
+  sym _ = "Actor"
+
+instance Show Actor where
+  show (Actor i c inv ab) = unwords [ "Actor {"
+                                    , "id =", show i 
+                                    , ", char =", show c
+                                    , ", inventory =", show inv
+                                    , ", abilities =", show ab
+                                    , "}"
+                                    ]
+
 
 instance NFData Actor where
   rnf (Actor i c inv ab) = rnf (i,c,inv,ab)

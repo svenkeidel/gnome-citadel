@@ -78,10 +78,13 @@ instance NFData Task where
 
 instance Show Task where
   show task = "Task "
-           ++ "{ _id = " ++ show (task ^. id)
-           ++ ", _target = " ++ show (task ^. target)
-           ++ ", _type = " ++ show (task ^. taskType)
+           ++ "{ id = " ++ show (task ^. id)
+           ++ ", target = " ++ show (task ^. target)
+           ++ ", type = " ++ show (task ^. taskType)
            ++ " }"
+
+instance Symbol Task where
+  sym _ = "Task"
 
 instance Eq Task where
   t1 == t2 = t1 ^. id == t2 ^. id
