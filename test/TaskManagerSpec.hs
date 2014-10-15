@@ -45,7 +45,7 @@ spec = describe "The TaskManager" $ do
                                     , " ##  "
                                     , "m #  "
                                     ]
-        task = LevelTask.mine (findWall lvl (1,1)) lvl (Identifier 1)
+        Just task = LevelTask.mine (findWall lvl (1,1)) lvl (Identifier 1)
         tm = addTask task empty
         dwarf = findDwarf lvl 'm'
     reachable (calculateReachable tm lvl) task dwarf `shouldBe` Reachable
@@ -55,7 +55,7 @@ spec = describe "The TaskManager" $ do
                                     , "  ## "
                                     , "m #  "
                                     ]
-        task = LevelTask.mine (findWall lvl (3,1)) lvl (Identifier 1)
+        Just task = LevelTask.mine (findWall lvl (3,1)) lvl (Identifier 1)
         tm = addTask task empty
         dwarf = findDwarf lvl 'm'
     reachable (calculateReachable tm lvl) task dwarf `shouldBe` Unreachable
@@ -68,7 +68,7 @@ spec = describe "The TaskManager" $ do
                                       , "c  "
                                       ]
           taskManagerAssigned = assignTask' lvl task
-          task = LevelTask.mine (findWall lvl (1,0)) lvl (Identifier 1)
+          Just task = LevelTask.mine (findWall lvl (1,0)) lvl (Identifier 1)
           dwarf = findDwarf lvl 'c'
       taskManagerAssigned `shouldSatisfy` not . isAssignedTo task dwarf
 
@@ -79,7 +79,7 @@ spec = describe "The TaskManager" $ do
                                       , "m  "
                                       ]
           taskManagerAssigned = assignTask' lvl task
-          task = LevelTask.mine (findWall lvl (1,0)) lvl (Identifier 1)
+          Just task = LevelTask.mine (findWall lvl (1,0)) lvl (Identifier 1)
           dwarf = findDwarf lvl 'm'
       taskManagerAssigned `shouldSatisfy` not . isAssignedTo task dwarf
 
@@ -90,7 +90,7 @@ spec = describe "The TaskManager" $ do
                                       , "m  "
                                       ]
           taskManagerAssigned = assignTask' lvl task
-          task = LevelTask.mine (findWall lvl (1,0)) lvl (Identifier 1)
+          Just task = LevelTask.mine (findWall lvl (1,0)) lvl (Identifier 1)
           dwarfLowerLeft = findDwarfByCoord lvl (from2d (0,3))
           dwarfUpperRight = findDwarfByCoord lvl (from2d (2,1))
       taskManagerAssigned `shouldSatisfy` isAssignedTo task dwarfUpperRight
@@ -101,7 +101,7 @@ spec = describe "The TaskManager" $ do
                                       , " # "
                                       , "m  "
                                       ]
-          task = LevelTask.mine (findWall lvl (1,0)) lvl (Identifier 1)
+          Just task = LevelTask.mine (findWall lvl (1,0)) lvl (Identifier 1)
           taskManagerAssigned = assignTask' lvl task
           dwarf = findDwarf lvl 'm'
       taskManagerAssigned `shouldSatisfy` isAssignedTo task dwarf
@@ -112,7 +112,7 @@ spec = describe "The TaskManager" $ do
                                       , " # "
                                       , "m  "
                                       ]
-          task = LevelTask.mine (findWall lvl (1,0)) lvl (Identifier 1)
+          Just task = LevelTask.mine (findWall lvl (1,0)) lvl (Identifier 1)
           taskManagerAssigned = assignTask' lvl task
           dwarf = findDwarf lvl 'm'
       taskManagerAssigned `shouldSatisfy` not . isAssignedTo task dwarf
@@ -122,7 +122,7 @@ spec = describe "The TaskManager" $ do
                                                , " # "
                                                , "m  "
                                                ]
-          task = LevelTask.mine (findWall lvl (1,0)) lvl (Identifier 1)
+          Just task = LevelTask.mine (findWall lvl (1,0)) lvl (Identifier 1)
           taskManagerAssigned = assignTask' lvl task
       e <- execWriterT $ gameStepShouldChangeLevelTo [ "## "
                                                      , "m# "
@@ -147,7 +147,7 @@ spec = describe "The TaskManager" $ do
                                                , " # "
                                                , "m  "
                                                ]
-          task = LevelTask.mine (findWall lvl (1,0)) lvl (Identifier 1)
+          Just task = LevelTask.mine (findWall lvl (1,0)) lvl (Identifier 1)
           taskManagerAssigned = assignTask' lvl task
           dwarf = findDwarf lvl 'm'
 
@@ -168,8 +168,8 @@ spec = describe "The TaskManager" $ do
                                                ,"        "
                                                ,"  m  m  "
                                                ]
-          task1 = LevelTask.mine (findWall lvl (2,0)) lvl (Identifier 1)
-          task2 = LevelTask.mine (findWall lvl (5,0)) lvl (Identifier 2)
+          Just task1 = LevelTask.mine (findWall lvl (2,0)) lvl (Identifier 1)
+          Just task2 = LevelTask.mine (findWall lvl (5,0)) lvl (Identifier 2)
           taskManagerAssigned = assignTasks lvl $ addTask task2 $ addTask task1 empty
 
       ((_,tm'),e) <- runWriterT $
@@ -185,8 +185,8 @@ spec = describe "The TaskManager" $ do
                                       ,"        "
                                       ,"m   x  m"
                                       ]
-          task1 = LevelTask.mine (findWall lvl (2,0)) lvl (Identifier 1)
-          task2 = LevelTask.mine (findWall lvl (5,0)) lvl (Identifier 2)
+          Just task1 = LevelTask.mine (findWall lvl (2,0)) lvl (Identifier 1)
+          Just task2 = LevelTask.mine (findWall lvl (5,0)) lvl (Identifier 2)
           taskManagerAssigned = assignTasks lvl $ addTask task2 $ addTask task1 empty
 
       _ <- execWriterT $ gameStepShouldChangeLevelTo ["  ####  "
@@ -229,8 +229,8 @@ spec = describe "The TaskManager" $ do
                                                    ]
           wall1 = findWall levelWithPickAxe (0,0)
           wall2 = findWall levelWithPickAxe (2,2)
-          task1 = LevelTask.mine wall1 levelWithPickAxe (Identifier 1)
-          task2 = LevelTask.mine wall2 levelWithPickAxe (Identifier 2)
+          Just task1 = LevelTask.mine wall1 levelWithPickAxe (Identifier 1)
+          Just task2 = LevelTask.mine wall2 levelWithPickAxe (Identifier 2)
           taskManagerAssigned = assignTasks levelWithPickAxe $ addTask task2 $ addTask task1 empty
       (_,es) <- runWriterT $
         gameStepShouldChangeLevelTo [ "#  "

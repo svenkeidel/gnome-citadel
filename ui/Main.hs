@@ -49,9 +49,7 @@ onKeyPressed _ c state = case c of
   '.' -> return $ executeGameStep state
   ':' -> return $ nTimes 50 executeGameStep state
   'm' -> return $ case findWall csr lvl of
-    Just w  -> case LevelTask.mine w lvl of
-                 Just t -> addTask' t state
-                 Nothing -> errorMessage "Mining task could not be created"
+    Just w  -> addTask' (LevelTask.mine w lvl) state
     Nothing -> errorMessage "Mining target not mineable" state
   'M' -> do
     let ws = findAllWalls lvl
@@ -97,11 +95,14 @@ eventLoop vty state = do
         _ -> eventLoop vty state
     _ -> eventLoop vty state
 
-addTask' :: (Identifier a -> Task) -> GameState -> GameState
-addTask' task s = let (tid,s') = freshId s
-                      taskManagerWithTask = addTask (task tid) (s ^. taskManager)
-                      ts' = assignTasks (s ^. level) taskManagerWithTask
-                  in s' & taskManager .~ ts'
+addTask' :: (Identifier a -> Maybe Task) -> GameState -> GameState
+addTask' task s = case task tid of
+  Just task' ->
+    let taskManagerWithTask = addTask task' (s ^. taskManager)
+    in s' & taskManager .~ assignTasks (s ^. level) taskManagerWithTask
+  Nothing -> s
+  where
+    (tid,s') = freshId s
 
 errorMessage :: String -> GameState -> GameState
 errorMessage str = messages %~ (str :)
@@ -120,7 +121,7 @@ abortedTaskMessages = map (\(AbortedTask _ msg) -> msg)
 
 findWall :: (Int, Int) -> Level -> Maybe StaticElement
 findWall c lvl = preview _head . flip findStaticElement lvl $ \t ->
-  render (toTile t) == '#' && lvl ^. coordOfTile t  == from2d c
+  render (toTile t) == '#' && lvl ^? coordOfTile t  == Just (from2d c)
 
 findAllWalls :: Level -> [StaticElement]
 findAllWalls lvl = catMaybes $ traverse findWall cs lvl

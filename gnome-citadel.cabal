@@ -74,7 +74,7 @@ benchmark a-star-bench
   hs-source-dirs:   bench/astar
   main-is:          AStarBench.hs
   build-depends:    base == 4.*
-                  , criterion >= 1.0.1 && < 1.1
+                  , criterion >= 1.0.1 && < 1.2
                   , gnome-citadel
   ghc-options:      -Wall
                     -O2

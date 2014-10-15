@@ -5,7 +5,7 @@ import           Control.Monad.Writer
 import           Criterion.Main
 import           Criterion.Types
 import           Data.Foldable (foldl')
-import           Data.Maybe (catMaybes)
+import           Data.Maybe (catMaybes,fromJust)
 
 import           Control.Lens hiding (Level)
 
@@ -43,14 +43,14 @@ executeGameStep' (lvl, tm) =
 
 findWall :: (Int, Int) -> Level -> Maybe StaticElement
 findWall c lvl = preview _head . flip findStaticElement lvl $ \t ->
-  render (toTile t) == '#' && lvl ^. coordOfTile t  == from2d c
+  render (toTile t) == '#' && lvl ^? coordOfTile t  == Just (from2d c)
 
 findAllWalls :: Level -> [StaticElement]
 findAllWalls lvl = catMaybes $ traverse findWall cs lvl
   where cs = [(cdx,cdy) | cdx <- [0..lvl^.bounds._1], cdy <- [0..lvl^.bounds._2]]
 
 mineAllWalls :: Level -> TaskManager -> (Level,TaskManager)
-mineAllWalls lvl tm = (lvl,fst $ foldl' (\(tm',i) w -> (addTask (LevelTask.mine w lvl i) tm',succ i)) (tm,Identifier 0) (findAllWalls lvl))
+mineAllWalls lvl tm = (lvl,fst $ foldl' (\(tm',i) w -> (addTask (fromJust (LevelTask.mine w lvl i)) tm',succ i)) (tm,Identifier 0) (findAllWalls lvl))
 
 benchLevel :: Level
 benchLevel = createLevel . unlines $
