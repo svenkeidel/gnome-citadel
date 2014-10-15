@@ -1,16 +1,16 @@
 module PathSpec(main, spec) where
 
-import Test.Hspec
-import Coords
-import Path
-import Path.Internal
-import Data.List (sort)
-import Data.Default
-import Data.Maybe (isJust,isNothing)
+import           Coords
+import           Data.Default
+import           Data.List (sort)
 import qualified Data.Map as Map
+import           Data.Maybe (isJust,isNothing)
 import qualified Data.PSQueue as PSQ
+import           Path
+import           Path.Internal hiding (floodUntil)
+import           Test.Hspec
 
-import Control.Lens
+import           Control.Lens
 
 main :: IO ()
 main = hspec spec
@@ -225,15 +225,52 @@ spec = describe "Path finding functionality" $ do
                                  && z == 0
                                  && x `elem` [0..5]
                                  && y `elem` [0..5]
-          path    = findArea allowed start goal
-      path `shouldBe` (Just $ pathFrom2d 3 [ (3,5)
-                                           , (4,4)
-                                           , (5,3)
-                                           , (4,2)
-                                           ])
+          path = findArea allowed start goal
+      (path ^? _Just . pathCoords) `shouldBe`
+        (Just . map from2d $ [ (3,5) , (4,4) , (5,3) , (4,2)])
 
     it "should return nothing if the goal area is empty" $ do
       let start   = from2d (0, 0)
           goals    = []
           path    = findArea (const True) start goals
       path `shouldSatisfy` isNothing
+
+  context "flooding" $ do
+      {-
+             0   1   2   3   4   5
+           +---+---+---+---+---+---+
+         0 |   | 3 | 3 | 3 |   |   |
+           +---+---+---+---+---+---+
+         1 | 2 | 1 | 1 | 1 | 4 |   |
+           +---+---+---+---+---+---+
+         2 | 2 | 1 | S | 1 | 4 |   |
+           +---+---+---+---+---+---+
+         3 | 2 | 1 | 1 | 1 | 4 |   |
+           +---+---+---+---+---+---+
+         4 |   | 5 | 5 | 5 |   |   |
+           +---+---+---+---+---+---+
+         5 |   |   |   |   |   |   |
+           +---+---+---+---+---+---+
+      -}
+    let start = from2d (2,2)
+        allowed (Coord x y _) = x `elem` [0..5] && y `elem` [0..5]
+
+    it "should visit all coords when flooding unconditionally" $ do
+      let pmap = floodUntil (const Continue) allowed start
+      Map.size pmap `shouldBe` 64
+
+    it "should stop immediately if the given predicate is always true" $ do
+      let pmap = floodUntil (const Abort) allowed start
+      Map.size pmap `shouldBe` 1
+
+    it "should stop if the given predicate is true" $ do
+      let pmap = floodUntil (continueIf . not . (> 5) . Map.size) allowed start
+      Map.size pmap `shouldSatisfy` (> 5)
+      Map.size pmap `shouldBe` 9
+
+    it "should explore disjoint regions respecting blocked coords" $ do
+       let allowed' c@(Coord _ y _) = y /= 3 && allowed c
+           pmap = floodUntil (const Continue) allowed' start
+       Map.size pmap `shouldBe` 40
+       Map.member (from2d (2,4)) pmap `shouldBe` False
+       Map.member (from2d (2,1)) pmap `shouldBe` True

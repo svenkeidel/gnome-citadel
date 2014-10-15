@@ -19,3 +19,8 @@
 gnome-citadel: the identifer 'Tile {_id = Identifier 22, _charRepr =
 '#'}' has no assigned coordinate
 - don't do it twice if same task present (different equality check)
+*** BUG Mining task is assigned although tool not available
+- check if actor satisfies required task prerequisites
+*** BUG After picking up tool, actor 'resets' to start point
+...and continues from there
+*** BUG Chosen task is not the one nearest to actor

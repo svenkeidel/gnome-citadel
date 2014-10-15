@@ -7,13 +7,16 @@ import Actor
 import StaticElement
 
 wall :: Identifier StaticElement -> StaticElement
-wall i = StaticElement i '#'
+wall i = StaticElement i '#' Blocking (Set.fromList [Soil])
 
 free :: Identifier StaticElement -> StaticElement
-free i = StaticElement i ' '
+free i = StaticElement i ' ' Walkable Set.empty
 
 miner :: Identifier Actor -> Actor
 miner i = Actor i 'm' [] (Set.fromList [Mine])
 
 chopper :: Identifier Actor -> Actor
 chopper i = Actor i 'c' [] (Set.fromList [Lumber])
+
+pickaxe :: Identifier StaticElement -> StaticElement
+pickaxe i = StaticElement i 'x' Walkable (Set.fromList [Mining])

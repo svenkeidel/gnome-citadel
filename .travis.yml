@@ -1,6 +1,19 @@
 before_install:
+  - cabal update
+  - cabal install -j cabal-install
+  - cabal sandbox init
   - sudo apt-get update
   - sudo apt-get -y -qq install libsdl1.2-dev libsdl-image1.2-dev libsdl-mixer1.2-dev libsdl-ttf2.0-dev
+
+install:
+  - cabal install -j --only-dependencies --enable-tests --enable-benchmarks
+
+script:
+  - cabal configure --enable-tests --enable-benchmarks && cabal build -j && cabal test -j
+
+ghc:
+  - 7.8
+  - 7.6
 
 language: haskell
 

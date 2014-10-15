@@ -4,9 +4,13 @@ module Path ( searchPath
             , defaultPath
             , findArea
 
+            , ContinueFlooding(..)
+            , continueIf
+            , floodUntil
+
             , Path (Path)
-            , pathLength
-            , pathCoords
+            , P.pathLength
+            , P.pathCoords
             ) where
 
 import Control.Lens ((&), (%~), view)
@@ -18,7 +22,8 @@ import qualified Data.Map as Map
 import qualified Data.PSQueue as PSQ
 
 import Coords
-import Path.Internal
+import Path.Internal (Path, PathFinderState, PredecessorMap, ContinueFlooding(..))
+import qualified Path.Internal as P
 
 searchPath :: (Coord -> Bool)            -- ^ Check if coord is allowed
            -> (Coord -> Double)          -- ^ Heuristic value for the coord
@@ -42,7 +47,7 @@ pathCost :: (Coord -> Bool)            -- ^ Check if coord is allowed
          -> Coord                      -- ^ The start coord
          -> Coord                      -- ^ The goal coord
          -> Maybe Double               -- ^ Cost of a path from start to goal
-pathCost w h step start goal = fmap (view pathLength) (searchPath w h step start (== goal))
+pathCost w h step start goal = fmap (view P.pathLength) (searchPath w h step start (== goal))
 
 -- | Searches a path from 'start' to 'goal', without walking cells
 -- that are not allowed according to the given predicate. The
@@ -57,10 +62,19 @@ defaultPath walkable start goal =
 findArea :: (Coord -> Bool) -> Coord -> [Coord] -> Maybe Path
 findArea _ _ [] = Nothing
 findArea walkable start goals =
-  searchPath walkable heuristic (const . const $ 1) start (`elem` goals)
+  searchPath walkable heuristic distance start (`elem` goals)
   where
     heuristic :: Coord -> Double
     heuristic coord = minimum $ map (distance coord) goals
+
+continueIf :: Bool -> ContinueFlooding
+continueIf True = Continue
+continueIf False = Abort
+
+floodUntil :: (PredecessorMap -> ContinueFlooding) -> (Coord -> Bool) -> Coord -> PredecessorMap
+floodUntil p walkable start =
+  view P.seen . P.execPathFinder config (initState start) $ P.floodUntil p start
+  where config = P.PathFinderConfig walkable (const 1) distance neighbors2d (const False)
 
 -- private helper
 pathFinderSearch :: (Coord -> Bool)
@@ -70,9 +84,11 @@ pathFinderSearch :: (Coord -> Bool)
                  -> (Coord -> Bool)
                  -> (Maybe Path, PathFinderState)
 pathFinderSearch walkable heuristic step start isGoal =
-  runPathFinder config initState $ findPath start
+  P.runPathFinder config (initState start) $ P.findPath start
   where
-    config = PathFinderConfig walkable heuristic step neighbors2d isGoal
-    initState :: PathFinderState
-    initState = def & seen %~ Map.insert start (0,Nothing)
-                    & open %~ PSQ.insert start 0
+    config = P.PathFinderConfig walkable heuristic step neighbors2d isGoal
+
+-- Insert start into open set, set predecessor of start to Nothing
+initState :: Coord -> PathFinderState
+initState start = def & P.seen %~ Map.insert start (0,Nothing)
+                      & P.open %~ PSQ.insert start 0

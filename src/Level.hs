@@ -1,4 +1,5 @@
 {-# LANGUAGE TemplateHaskell, RankNTypes, FlexibleContexts, ScopedTypeVariables #-}
+{-# LANGUAGE ViewPatterns #-}
 module Level ( Level (..)
              , emptyLevel
 
@@ -14,6 +15,7 @@ module Level ( Level (..)
              , actorsAt
              , staticElementsAt
              , coordOf
+             , coordOfTile
              , findPath
              , findArea
              , findActor
@@ -22,34 +24,43 @@ module Level ( Level (..)
              , inBounds
              , isReachable
              , deleteFromCoords
+             , actorInventory
+             , holdsSuitableTool
+             , findTool
+
+             , addActor
+             , addItem
 
              , TileBuilder
 
              , module Coords
              ) where
 
-import Control.Lens (ix, lens, Lens', to, view)
-import Control.Lens.Operators
-import Control.Lens.TH
-import Data.Default
+import           Control.Lens (Fold, Traversal', _Just, ix, lastOf, lens, view)
+import           Control.Lens.At (contains)
+import           Control.Lens.Fold (folded, elemOf, findOf, anyOf)
+import           Control.Lens.Operators
+import           Control.Lens.TH
+import           Data.Default
 
 import qualified Control.Lens.Getter as LG
 import qualified Data.Map as M
 import qualified Data.List as L
 
-import Data.Maybe(mapMaybe,fromMaybe,isJust)
+import           Data.Maybe (isJust, mapMaybe)
 
-import Counter
-import Tile
-import Renderable
-import Coords
-import Utils
+import           Counter
+import           Tile
+import           Renderable
+import           Coords
+import           Utils
 
-import Actor(Actor)
-import StaticElement(StaticElement)
 import qualified Actor
-import qualified StaticElement
+import           Actor (Actor)
+import           Control.DeepSeq (NFData, rnf)
 import qualified Path as P
+import qualified StaticElement
+import           StaticElement (StaticElement,Category)
 
 data Level = Level { _actors            :: M.Map (Identifier Actor) Actor
                    , _staticElements    :: M.Map (Identifier StaticElement) StaticElement
@@ -59,6 +70,10 @@ data Level = Level { _actors            :: M.Map (Identifier Actor) Actor
                    , _walkable          :: Level -> Coord -> Bool
                    }
 makeLenses ''Level
+
+instance NFData Level where
+  rnf (Level as ses bs itc cti _) = rnf (as,ses,bs,itc,cti)
+
 
 instance Show Level where
   show = toString
@@ -87,8 +102,8 @@ fromString builder str cnt0 = foldr insert (emptyLevel,cnt0) coordStr
     insert (coord,char) (lvl,cnt) =
       let (nextId,cnt') = freshId cnt
           lvl' = lvl & case builder nextId char of
-                        Just (Left  a) -> actors         %~ M.insert nextId (Actor.id .~ nextId $ a)
-                        Just (Right s) -> staticElements %~ M.insert nextId (StaticElement.id .~ nextId $ s)
+                        Just (Left  a) -> addActor (Actor.id .~ nextId $ a)
+                        Just (Right s) -> addItem (StaticElement.id .~ nextId $ s)
                         Nothing        -> Prelude.id
                     & idToCoord %~ M.insert nextId coord
                     & coordToId %~ M.insertWith (++) coord [nextId]
@@ -105,16 +120,16 @@ toString lvl = unlines $ (map . map) (\c -> render . at c $ lvl) coords
 
 -- | returns a list of tiles located at the given coordinate inside the level
 at :: Coord -> Level -> [Tile]
-at coord lvl = map toTile (actorsAt coord lvl) ++ map toTile (staticElementsAt coord lvl)
+at coord lvl = map toTile (actorsAt lvl coord) ++ map toTile (staticElementsAt lvl coord)
 
-actorsAt :: Coord -> Level -> [Actor]
-actorsAt coord lvl = mapMaybe lookupTile ids
+actorsAt :: Level -> Coord -> [Actor]
+actorsAt lvl coord = mapMaybe lookupTile ids
   where
     ids = M.findWithDefault [] coord (lvl ^. coordToId)
     lookupTile ident = M.lookup (asIdentifierOf ident) (lvl ^. actors)
 
-staticElementsAt :: Coord -> Level -> [StaticElement]
-staticElementsAt coord lvl = mapMaybe lookupTile ids
+staticElementsAt :: Level -> Coord -> [StaticElement]
+staticElementsAt lvl coord = mapMaybe lookupTile ids
   where
     ids = M.findWithDefault [] coord (lvl ^. coordToId)
     lookupTile ident = M.lookup (asIdentifierOf ident) (lvl ^. staticElements)
@@ -128,19 +143,23 @@ staticElementsAt coord lvl = mapMaybe lookupTile ids
 -- @
 -- lvl & coordOf dwarf .~ coord
 -- @
-coordOf :: TileRepr t => t -> Lens' Level Coord
-coordOf tile = lens getter setter
-  where
-    getter lvl =
-      fromMaybe (error $ "the identifer '" ++ show (toTile tile) ++ "' has no assigned coordinate")
-      $ M.lookup (toTile tile ^. Tile.id . to asIdentifierOf) (lvl ^. idToCoord)
-    setter lvl dst = lvl
-                   & idToCoord . ix tid .~ dst
-                   & coordToId . ix src %~ L.delete tid
-                   & coordToId . ix dst %~ (tid :)
-      where
-        tid = asIdentifierOf $ toTile tile ^. Tile.id
-        src = getter lvl
+coordOf :: HasIdentifier a => a -> Traversal' Level Coord
+coordOf ident0 = lens getter setter . _Just
+   where
+    ident = asIdentifierOf (getIdentifier ident0)
+
+    getter :: Level -> Maybe Coord
+    getter lvl = M.lookup ident (lvl ^. idToCoord)
+
+    setter :: Level -> Maybe Coord -> Level
+    setter lvl Nothing = lvl
+    setter lvl (Just dst) = lvl
+                          & idToCoord . ix ident .~ dst
+                          & maybe Prelude.id (\src -> coordToId . ix src %~ L.delete ident) (getter lvl)
+                          & coordToId . ix dst %~ (ident :)
+
+coordOfTile :: TileRepr t => t -> Traversal' Level Coord
+coordOfTile tile = coordOf (toTile tile ^. Tile.id)
 
 isWalkable :: Coord -> Level -> Bool
 isWalkable c lvl = _walkable lvl lvl c
@@ -182,3 +201,32 @@ isReachable target lvl =
         canReach actor = isJust $ do
           actorCoord <- M.lookup (asIdentifierOf $ actor ^. Actor.id) (lvl ^. idToCoord)
           P.defaultPath (lvl ^-> walkable) actorCoord target
+
+actorInventory :: Level -> Actor -> [StaticElement]
+actorInventory lvl actor = map lookupId invIds
+  where invIds :: [Identifier StaticElement]
+        invIds = actor ^. Actor.inventory
+
+        lookupId :: Identifier StaticElement -> StaticElement
+        lookupId identifier = case M.lookup identifier (lvl ^. staticElements) of
+                                Just e -> e
+                                Nothing -> error $ "Could not find the identifier: " ++ show identifier ++ " which is in the inventory of actor: " ++ show actor ++ "\n Static elements in the level:\n\n" ++ show (lvl ^. staticElements)
+
+holdsSuitableTool :: Level -> Actor -> Category -> Bool
+holdsSuitableTool lvl actor cat = anyOf categories (== cat) (actorInventory lvl actor)
+
+findTool :: Category -> Coord -> Level -> Maybe StaticElement
+findTool cat coord lvl = do
+  p <- P.searchPath (lvl ^-> walkable) (const 1) (const . const 1) coord predicate
+  c <- lastOf (P.pathCoords . folded) p
+  findOf folded (^. StaticElement.category . contains cat) $ staticElementsAt lvl c
+  where predicate = elemOf categories cat . staticElementsAt lvl
+
+categories :: Fold [StaticElement] Category
+categories = folded . StaticElement.category . folded
+
+addItem :: StaticElement -> Level -> Level
+addItem item = staticElements %~ M.insert (item ^. StaticElement.id) item
+
+addActor :: Actor -> Level -> Level
+addActor actor = actors %~ M.insert (actor ^. Actor.id) actor

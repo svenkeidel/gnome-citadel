@@ -14,43 +14,43 @@ data-files:            tiles/*.png
 library
   hs-source-dirs:      src
   ghc-options:         -Wall -Werror
-  exposed-modules:     Tile,
-                       Task,
-                       Level,
-                       Level.Transformation,
-                       Level.Command,
-                       Level.Task,
-                       Actor,
-                       Counter,
-                       Renderable,
-                       StaticElement,
-                       Scheduler,
-                       Unfold,
-                       Queue,
-                       Coords,
-                       Path,
-                       Path.Internal,
-                       TaskManagement,
-                       Utils,
-                       TestHelper,
-                       TestTiles
-  Build-depends:       base ==4.*,
-                       containers,
-                       lens,
-                       mtl,
-                       PSQueue,
-                       transformers,
-                       data-default,
-                       deepseq
+  exposed-modules:     Actor
+                     , Coords
+                     , Control.Coroutine
+                     , Control.Coroutine.AwaitYield
+                     , Counter
+                     , Level
+                     , Level.Command
+                     , Level.Task
+                     , Level.Transformation
+                     , Path
+                     , Path.Internal
+                     , Queue
+                     , Renderable
+                     , StaticElement
+                     , Task
+                     , TaskManagement
+                     , TestHelper
+                     , TestTiles
+                     , Tile
+                     , Utils
+  Build-depends:       PSQueue >= 1.1 && < 1.2
+                     , base == 4.*
+                     , containers >= 0.5 && < 0.6
+                     , data-default >= 0.5 && < 0.6
+                     , deepseq >= 1.3 && < 1.4
+                     , lens >= 4.4 && < 4.5
+                     , mtl >= 2.1 && < 2.3
+                     , transformers == 0.3.*
 
 executable gnome-citadel
   hs-source-dirs:      ui, test
-  ghc-options:         -Wall
-  Build-depends:       base ==4.*,
-                       gnome-citadel,
-                       vty == 4.7.3,
-                       lens,
-                       data-default
+  ghc-options:         -Wall -threaded
+  Build-depends:       base == 4.*
+                     , data-default >= 0.5 && < 0.6
+                     , gnome-citadel
+                     , lens >= 4.4 && < 4.5
+                     , vty >= 5.2 && < 5.3
   main-is:             Main.hs
 
 test-suite specs
@@ -58,23 +58,35 @@ test-suite specs
   ghc-options:         -Wall
   hs-source-dirs:      test
   main-is:             Spec.hs
-  build-depends:       base ==4.*,
-                       containers,
-                       hspec >= 1.9,
-                       gnome-citadel,
-                       QuickCheck,
-                       mtl,
-                       lens,
-                       transformers,
-                       data-default == 0.5.*,
-                       PSQueue == 1.1.*
+  build-depends:       PSQueue >= 1.1 && < 1.2
+                     , QuickCheck
+                     , base == 4.*
+                     , containers >= 0.5 && < 0.6
+                     , data-default == 0.5.*
+                     , gnome-citadel
+                     , hspec >= 1.9
+                     , lens >= 4.4 && < 4.5
+                     , mtl >= 2.1 && < 2.3
+                     , transformers >= 0.3 && < 0.4
 
 benchmark a-star-bench
   type:             exitcode-stdio-1.0
-  hs-source-dirs:   bench
+  hs-source-dirs:   bench/astar
   main-is:          AStarBench.hs
-  build-depends:    base,
-                    criterion,
-                    gnome-citadel
+  build-depends:    base == 4.*
+                  , criterion >= 1.0.1 && < 1.2
+                  , gnome-citadel
+  ghc-options:      -Wall
+                    -O2
+
+benchmark task-scheduling
+  type:             exitcode-stdio-1.0
+  hs-source-dirs:   bench/task-scheduling
+  main-is:          TaskScheduling.hs
+  build-depends:    base == 4.*
+                  , criterion >= 1.0.1 && < 1.1
+                  , gnome-citadel
+                  , lens >= 4.4 && < 4.5
+                  , mtl >= 2.1 && < 2.3
   ghc-options:      -Wall
                     -O2

@@ -2,10 +2,13 @@
 module Main (main) where
 
 import           Control.Applicative ((<$>),(<*>))
+import           Control.Exception (finally)
 import           Control.Lens (_1, _2, preview, _head, folded, to, view)
 import           Control.Lens.Operators
 import           Control.Lens.TH
 import           Data.Default (Default(def))
+import           Data.Maybe (catMaybes)
+import           Data.Traversable (traverse)
 import           Graphics.Vty
 
 import           Counter (Counter, Identifier)
@@ -15,14 +18,11 @@ import qualified Level.Task as LevelTask
 import           Renderable
 import           StaticElement (StaticElement)
 import           Task (Task)
-import           TaskManagement ( AbortedTask(..)
-                                , TaskManager
-                                , empty
-                                , addTask
-                                , assignTasks)
+import           TaskManagement (AbortedTask(..), TaskManager, addTask, assignTasks, empty)
 import qualified TaskManagement as TM
 import           TestHelper (createLevel)
 import           Tile (TileRepr(toTile))
+import           Utils
 
 data GameState = GameState { _cursor :: (Int,Int)
                            , _level:: Level
@@ -37,29 +37,36 @@ instance Default GameState where
 
 main :: IO ()
 main = do
-  vty <- mkVty
-  let lvlInit = createLevel $ unlines ["  ####  "
-                                      ,"  ##### "
-                                      ,"        "
-                                      ,"  m  m  "
-                                      ]
-
+  vty <- mkVty def
   eventLoop vty (def & level .~ lvlInit)
-  shutdown vty
+    `finally` shutdown vty
+
+lvlInit :: Level
+lvlInit = createLevel $ unlines startLevel
 
 onKeyPressed :: Monad m => t -> Char -> GameState -> m GameState
 onKeyPressed _ c state = case c of
   '.' -> return $ executeGameStep state
+  ':' -> return $ nTimes 50 executeGameStep state
   'm' -> return $ case findWall csr lvl of
     Just w  -> addTask' (LevelTask.mine w lvl) state
     Nothing -> errorMessage "Mining target not mineable" state
+  'M' -> do
+    let ws = findAllWalls lvl
+        fs = map (\w -> addTask' $ LevelTask.mine w lvl) ws
+    return $ fs $$ state
   'h' -> return $ moveCursor state (-1) 0
   'j' -> return $ moveCursor state  0   1
   'k' -> return $ moveCursor state  0 (-1)
   'l' -> return $ moveCursor state  1   0
+  'r' -> return (def & level .~ lvlInit)
   _   -> return state
   where csr = state ^. cursor
         lvl = state ^. level
+
+nTimes :: Int -> (a -> a) -> a -> a
+nTimes 0 _ = id
+nTimes n f = f . nTimes (n-1) f
 
 executeGameStep :: GameState -> GameState
 executeGameStep s = s & level .~ lvl' & taskManager .~ tm' & logMessages aborted
@@ -77,22 +84,25 @@ moveCursor s dx dy = s & cursor .~ (x',y')
 eventLoop :: Vty -> GameState -> IO ()
 eventLoop vty state = do
   update vty (drawGame state)
-  e <- next_event vty
+  e <- nextEvent vty
   case e of
     EvKey k _ ->
       case k of
-        (KASCII 'q') -> return ()
-        (KASCII c)   -> do
+        (KChar 'q') -> return ()
+        (KChar c)   -> do
           state' <- onKeyPressed vty c state
           eventLoop vty state'
         _ -> eventLoop vty state
     _ -> eventLoop vty state
 
-addTask' :: (Identifier a -> Task) -> GameState -> GameState
-addTask' task s = let (tid,s') = freshId s
-                      taskManagerWithTask = addTask (task tid) (s ^. taskManager)
-                      ts' = assignTasks (s ^. level) taskManagerWithTask
-                  in s' & taskManager .~ ts'
+addTask' :: (Identifier a -> Maybe Task) -> GameState -> GameState
+addTask' task s = case task tid of
+  Just task' ->
+    let taskManagerWithTask = addTask task' (s ^. taskManager)
+    in s' & taskManager .~ assignTasks (s ^. level) taskManagerWithTask
+  Nothing -> s
+  where
+    (tid,s') = freshId s
 
 errorMessage :: String -> GameState -> GameState
 errorMessage str = messages %~ (str :)
@@ -111,24 +121,33 @@ abortedTaskMessages = map (\(AbortedTask _ msg) -> msg)
 
 findWall :: (Int, Int) -> Level -> Maybe StaticElement
 findWall c lvl = preview _head . flip findStaticElement lvl $ \t ->
-  render (toTile t) == '#' && lvl ^. coordOf t  == from2d c
+  render (toTile t) == '#' && lvl ^? coordOfTile t  == Just (from2d c)
+
+findAllWalls :: Level -> [StaticElement]
+findAllWalls lvl = catMaybes $ traverse findWall cs lvl
+  where cs = [(cdx,cdy) | cdx <- [0..lvl^.bounds._1], cdy <- [0..lvl^.bounds._2]]
 
 drawGame :: GameState -> Picture
-drawGame s = setCursor (s ^. cursor) . pic_for_image $
-             (drawLevel (s ^. level) <-> drawMessages (s ^. messages))
-             <|> drawTaskManager (s ^. taskManager)
+drawGame s = setCursor (s ^. cursor) . picForImage $
+             (lvl' <-> msg) <|> vSep <|> tm
+  where lvl = drawLevel (s ^. level)
+        lvl' = lvl <-> hSep
+        msg = drawMessages (s ^. messages)
+        tm =drawTaskManager (s ^. taskManager)
+        vSep = vline $ imageHeight lvl'
+        hSep = hline $ imageWidth lvl
 
 drawLevel :: Level -> Image
-drawLevel = vert_cat . map (string def_attr) . lines . show
+drawLevel = vertCat . map (string defAttr) . lines . show
 
 drawMessages :: [String] -> Image
-drawMessages = vert_cat . map (string def_attr)
+drawMessages = vertCat . map (string defAttr)
 
 drawTaskManager :: TaskManager -> Image
-drawTaskManager tm = vert_cat . map (string def_attr) $
+drawTaskManager tm = vertCat . map (string defAttr) $
                      [ "inactive: " ++ tm ^. TM.inactive . folded . to show
                      , "active: " ++ tm ^. TM.active . folded . to show
-                     , "assignment: " ++ (show $ tm ^. TM.taskAssignment)
+                     , "assignment: " ++ show (tm ^. TM.taskAssignment)
                      ]
 
 freshId :: GameState -> (Identifier a, GameState)
@@ -136,4 +155,33 @@ freshId state = (ident,state & counter .~ cnt)
   where (ident,cnt) = C.freshId (state ^. counter)
 
 setCursor :: (Int, Int) -> Picture -> Picture
-setCursor (x,y) pic = pic { pic_cursor = Cursor (fromIntegral x) (fromIntegral y)}
+setCursor (x,y) pic = pic { picCursor = Cursor (fromIntegral x) (fromIntegral y)}
+
+hline :: Integral d => d -> Image
+hline n = charFill defAttr '━' n 1
+
+vline :: Integral d => d -> Image
+vline = charFill defAttr '┃' 1
+
+startLevel :: [String]
+startLevel =
+  [ "                                                           #####"
+  , "                                                           #####"
+  , "    #####                                                   m   "
+  , "   #     # #    #  ####  #    # ######                          "
+  , "   #       ##   # #    # ##  ## #                               "
+  , "   #  #### # #  # #    # # ## # #####                           "
+  , "   #     # #  # # #    # #    # #                    x          "
+  , "   #     # #   ## #    # #    # #                               "
+  , "    #####  #    #  ####  #    # ######                          "
+  , "                                                                "
+  , "                  ######                                        "
+  , "                 #        # #####   ##   #####  ###### #        "
+  , "                 #        #   #    #  #  #    # #      #        "
+  , "                 #        #   #   #    # #    # #####  #        "
+  , "                 #        #   #   ###### #    # #      #        "
+  , "                 #        #   #   #    # #    # #      #        "
+  , "   m              ######  #   #   #    # #####  ###### ######   "
+  , "#####                                                           "
+  , "#####                                                           "
+  ]

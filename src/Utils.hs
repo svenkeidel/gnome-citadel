@@ -2,11 +2,16 @@ module Utils ( runInState
              , (^->)
              , useFirst
              , fromRight
+             , ($$)
+             , applyAll
+             , unlessM
              ) where
 
-import Control.Lens((^.))
-import Control.Monad.State
-import Control.Monad.Reader
+import           Control.Lens ((^.))
+import           Control.Monad.Reader
+import           Control.Monad.State
+import           Data.Foldable (foldMap)
+import           Data.Monoid (appEndo, Endo(Endo))
 
 import qualified Control.Lens.Getter as G
 import qualified Data.Foldable as DF
@@ -36,3 +41,15 @@ useFirst = DM.getFirst . DF.foldMap DM.First
 fromRight :: Either a b -> b
 fromRight (Right x) = x
 fromRight _ = error "Can not extract right value of Left"
+
+infixr 0 $$
+($$) :: DF.Foldable t => t (a -> a) -> a -> a
+($$) fs = appEndo (foldMap Endo fs)
+
+applyAll :: DF.Foldable t => t (a -> a) -> a -> a
+applyAll = ($$)
+
+unlessM :: Monad m => m Bool -> m () -> m ()
+unlessM mb ma = do
+  b <- mb
+  if not b then ma else return ()
