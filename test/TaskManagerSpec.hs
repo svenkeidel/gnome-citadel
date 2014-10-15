@@ -215,7 +215,7 @@ spec = describe "The TaskManager" $ do
                          >=>
                          gameStepShouldChangeLevelTo ["  ####  "
                                                      ,"  ##### "
-                                                     ,"    m   "
+                                                     ,"     m  "
                                                      ,"    m   "
                                                      ]
                        $ (lvl, taskManagerAssigned)
@@ -238,9 +238,14 @@ spec = describe "The TaskManager" $ do
                                     , "  #"
                                     ]
         >=>
+        gameStepShouldChangeLevelTo [ "#  "
+                                    , " m "
+                                    , "  #"
+                                    ]
+        >=>
         gameStepShouldChangeLevelTo [ "m  "
-                                    , "   "
-                                    , "  m"
+                                    , " m "
+                                    , "  #"
                                     ]
          $ (levelWithPickAxe, taskManagerAssigned)
       es `shouldSatisfy` null -- no errors should have occured

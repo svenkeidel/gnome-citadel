@@ -36,7 +36,7 @@ module Level ( Level (..)
              , module Coords
              ) where
 
-import           Control.Lens (Fold, Lens', Traversal', ix, lastOf, lens, view)
+import           Control.Lens (Fold, Traversal', _Just, ix, lastOf, lens, view)
 import           Control.Lens.At (contains)
 import           Control.Lens.Fold (folded, elemOf, findOf, anyOf)
 import           Control.Lens.Operators
@@ -47,7 +47,7 @@ import qualified Control.Lens.Getter as LG
 import qualified Data.Map as M
 import qualified Data.List as L
 
-import           Data.Maybe (fromMaybe, isJust, mapMaybe)
+import           Data.Maybe (isJust, mapMaybe)
 
 import           Counter
 import           Tile
@@ -143,18 +143,20 @@ staticElementsAt lvl coord = mapMaybe lookupTile ids
 -- @
 -- lvl & coordOf dwarf .~ coord
 -- @
-coordOf :: HasIdentifier a => a -> Lens' Level Coord
-coordOf (asIdentifierOf . getIdentifier -> ident) = lens getter setter
-  where
-    getter lvl =
-      fromMaybe (error $ "the identifer '" ++ show ident ++ "' has no assigned coordinate in idToCoord:\n\n" ++ show (lvl ^. idToCoord))
-      $ M.lookup ident (lvl ^. idToCoord)
+coordOf :: HasIdentifier a => a -> Traversal' Level Coord
+coordOf ident0 = lens getter setter . _Just
+   where
+    ident = asIdentifierOf (getIdentifier ident0)
 
-    setter lvl dst = lvl
-                   & idToCoord . ix ident .~ dst
-                   & coordToId . ix src %~ L.delete ident
-                   & coordToId . ix dst %~ (ident :)
-      where src = getter lvl
+    getter :: Level -> Maybe Coord
+    getter lvl = M.lookup ident (lvl ^. idToCoord)
+
+    setter :: Level -> Maybe Coord -> Level
+    setter lvl Nothing = lvl
+    setter lvl (Just dst) = lvl
+                          & idToCoord . ix ident .~ dst
+                          & maybe Prelude.id (\src -> coordToId . ix src %~ L.delete ident) (getter lvl)
+                          & coordToId . ix dst %~ (ident :)
 
 coordOfTile :: TileRepr t => t -> Traversal' Level Coord
 coordOfTile tile = coordOf (toTile tile ^. Tile.id)
